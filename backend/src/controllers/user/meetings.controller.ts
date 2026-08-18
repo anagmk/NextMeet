@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import Meeting from "../../models/meeting.model.js";
 
 const generateUniqueMeetingCode = async (): Promise<string> => {
@@ -78,7 +79,8 @@ export const getMeetingByCode = async (req: Request, res: Response) => {
     const userId = (req.user as { _id?: string } | undefined)?._id;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
-    const meeting = await Meeting.findOne({ meetingCode: meetingCode.toUpperCase() })
+    const normalizedCode = String(meetingCode ?? "").trim().toUpperCase();
+    const meeting = await Meeting.findOne({ meetingCode: normalizedCode })
       .populate("hostId", "name email");
 
     if (!meeting) return res.status(404).json({ message: "Meeting not found" });
@@ -100,14 +102,14 @@ export const joinMeeting = async (req: Request, res: Response) => {
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
     if (!meetingCode) return res.status(400).json({ message: "Meeting code is required" });
 
-    const normalizedCode = String(meetingCode).trim().toUpperCase();
+    const normalizedCode = String(meetingCode ?? "").trim().toUpperCase();
     const meeting = await Meeting.findOne({ meetingCode: normalizedCode });
     if (!meeting) return res.status(404).json({ message: "Meeting not found" });
 
-    const isParticipant = meeting.participants.some((participant) => participant.userId.toString() === userId);
+    const isParticipant = meeting.participants.some((participant) => participant.userId.toString() === userId.toString());
     if (isParticipant) return res.status(400).json({ message: "User already joined the meeting" });
 
-    meeting.participants.push({ userId, role: "participant" });
+    meeting.participants.push({ userId: new mongoose.Types.ObjectId(userId), role: "participant" });
     await meeting.save();
 
     res.status(200).json({ message: "Joined the meeting successfully", meeting });

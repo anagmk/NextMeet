@@ -4,6 +4,8 @@ import { Server } from "socket.io";
 import app from "./app.js";
 import jwt from "jsonwebtoken";
 import User from "./models/user.model.js";
+import Meeting from "./models/meeting.model.js";
+import { saveMessage } from "./controllers/user/message.controller.js";
 
 const PORT = process.env.PORT || 5000;
 const httpServer = createServer(app);
@@ -77,19 +79,59 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("send-message", ({ meetingCode, message }: { meetingCode: string; message: string }) => {
-  const payload = {
-    message,
-    sender: socket.data.user.email,
-    senderId: socket.data.user._id,
-    timestamp: new Date().toISOString(),
-  };
+  socket.on("send-message", async ({ meetingCode, message }: { meetingCode: string; message: string }) => {
+    const trimmedMessage = String(message || "").trim();
 
-  console.log(`Message in ${meetingCode} from ${socket.data.user.email}:`, message);
+    if (!meetingCode || !trimmedMessage) {
+      return;
+    }
 
-  // send to everyone in the room, including sender
-  io.to(meetingCode).emit("receive-message", payload);
-});
+    try {
+      const meeting = await Meeting.findOne({ meetingCode: String(meetingCode).trim().toUpperCase() });
+      if (!meeting) {
+        return;
+      }
+
+      const isParticipant = meeting.participants.some(
+        (participant: { userId: { toString: () => string } }) => participant.userId.toString() === socket.data.user._id.toString()
+      );
+
+      if (!isParticipant) {
+        return;
+      }
+
+      const savedMessage = await saveMessage(
+        meeting._id.toString(),
+        socket.data.user._id.toString(),
+        trimmedMessage,
+        "text"
+      );
+
+      const payload = {
+        _id: savedMessage._id,
+        message: savedMessage.content,
+        sender: socket.data.user.name || socket.data.user.email,
+        senderId: socket.data.user._id,
+        timestamp: savedMessage.createdAt,
+      };
+
+      io.to(meetingCode).emit("receive-message", payload);
+    } catch (error) {
+      console.error("Socket send-message error:", error);
+    }
+  });
+
+    socket.on("webrtc-offer", ({ meetingCode, offer, to }) => {
+    io.to(to).emit("webrtc-offer", { offer, from: socket.id });
+  });
+
+  socket.on("webrtc-answer", ({ meetingCode, answer, to }) => {
+    io.to(to).emit("webrtc-answer", { answer, from: socket.id });
+  });
+
+  socket.on("webrtc-ice-candidate", ({ meetingCode, candidate, to }) => {
+    io.to(to).emit("webrtc-ice-candidate", { candidate, from: socket.id });
+  });
 
   socket.on("disconnect", () => {
     console.log("Socket disconnected:", socket.id);

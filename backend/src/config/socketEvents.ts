@@ -1,5 +1,3 @@
-import jwt from "jsonwebtoken";
-import { User } from "../models/index.js";
 import { Server } from "socket.io";
 
 export const onlineUsers = new Map();

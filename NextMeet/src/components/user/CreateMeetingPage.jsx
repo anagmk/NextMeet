@@ -73,7 +73,7 @@ function ScheduleMeeting() {
     e.preventDefault();
     const meeting = await createMeeting();
     if (meeting) {
-      navigate(`/join/${meeting.meetingCode}`);
+      navigate(`/meet/${meeting.meetingCode}`);
     }
   };
 
@@ -81,7 +81,7 @@ function ScheduleMeeting() {
   const handleGenerateLink = async () => {
     const meeting = await createMeeting();
     if (meeting) {
-      setMeetingLink(`${window.location.origin}/join/${meeting.meetingCode}`);
+      setMeetingLink(`${window.location.origin}/meet/${meeting.meetingCode}`);
     }
   };
 

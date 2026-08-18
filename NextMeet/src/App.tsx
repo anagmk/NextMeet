@@ -8,6 +8,7 @@ import Signup from "./pages/auth/signup";
 import Profile from "./pages/user/Profile.jsx";
 import ScheduleMeeting from "./pages/user/NewMeeting.jsx";
 import JoinLobby from "./components/user/JoinLobby.jsx";
+import CallScreen from "./components/user/CallScreen.jsx";
 
 function App() {
   useEffect(() => {
@@ -36,6 +37,7 @@ function App() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/create-meeting" element={<ScheduleMeeting />} />
       <Route path="/join/:meetingCode" element={<JoinLobby />} />
+      <Route path="/meet/:meetingCode" element={<CallScreen />} />
       <Route path="/join" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

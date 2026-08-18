@@ -33,30 +33,30 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-// models/meeting.model.ts
 const mongoose_1 = __importStar(require("mongoose"));
-const participantSchema = new mongoose_1.Schema({
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
-    role: { type: String, enum: ["host", "participant"], default: "participant" },
-    joinedAt: { type: Date, default: Date.now },
-}, { _id: false });
-const meetingSchema = new mongoose_1.Schema({
-    title: { type: String, required: true, trim: true },
-    description: { type: String, trim: true },
-    hostId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
-    meetingCode: { type: String, required: true, unique: true, uppercase: true },
-    scheduledAt: { type: Date, required: true, default: Date.now },
-    duration: { type: Number }, // in minutes, optional
-    status: {
-        type: String,
-        enum: ["scheduled", "active", "completed"],
-        default: "scheduled",
+const messageSchema = new mongoose_1.Schema({
+    meetingId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Meeting",
+        required: true,
     },
-    participants: { type: [participantSchema], default: [] },
-    closedAt: { type: Date },
-}, { timestamps: true });
-// Extra indexes for your common query patterns
-meetingSchema.index({ "participants.userId": 1 });
-meetingSchema.index({ hostId: 1 });
-const Meeting = mongoose_1.default.model("Meeting", meetingSchema);
-exports.default = Meeting;
+    senderId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+    },
+    content: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    type: {
+        type: String,
+        enum: ["text", "system"],
+        default: "text",
+    },
+}, {
+    timestamps: true,
+});
+const Message = mongoose_1.default.model("Message", messageSchema);
+exports.default = Message;
