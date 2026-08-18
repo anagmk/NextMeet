@@ -1,5 +1,9 @@
 
+import { useNavigate } from "react-router-dom";
+
 const DashboardNavbar = () => {
+  const navigate = useNavigate();
+
   return (
     <header className="h-14 border-b border-gray-100 bg-white">
       <div className="mx-auto flex h-full items-center justify-between px-4 md:px-6">
@@ -16,25 +20,45 @@ const DashboardNavbar = () => {
 
         {/* Navigation */}
         <nav className="hidden items-center gap-7 text-[12px] md:flex">
-          <a className="font-medium text-[#5146e5]" href="#">
+          <button
+            type="button"
+            className="font-medium text-[#5146e5]"
+            onClick={() => navigate("/dashboard")}
+          >
             Dashboard
-          </a>
+          </button>
 
-          <a className="text-gray-600 hover:text-gray-900" href="#">
+          <button
+            type="button"
+            className="text-gray-600 hover:text-gray-900"
+            onClick={() => navigate("/create-meeting")}
+          >
             Join
-          </a>
+          </button>
 
-          <a className="text-gray-600 hover:text-gray-900" href="#">
+          <button
+            type="button"
+            className="text-gray-600 hover:text-gray-900"
+            onClick={() => navigate("/create-meeting")}
+          >
             Host
-          </a>
+          </button>
 
-          <a className="text-gray-600 hover:text-gray-900" href="#">
+          <button
+            type="button"
+            className="text-gray-600 hover:text-gray-900"
+            onClick={() => navigate("/create-meeting")}
+          >
             Schedule
-          </a>
+          </button>
 
-          <a className="text-gray-600 hover:text-gray-900" href="#">
+          <button
+            type="button"
+            className="text-gray-600 hover:text-gray-900"
+            onClick={() => navigate("/create-meeting")}
+          >
             About
-          </a>
+          </button>
         </nav>
 
         {/* Right */}
@@ -49,6 +73,7 @@ const DashboardNavbar = () => {
               src="https://i.pravatar.cc/100?img=12"
               alt="Profile"
               className="h-8 w-8 rounded-full object-cover"
+              onClick={() => navigate("/profile")}
             />
 
             <span aria-hidden="true" className="text-gray-500">⌄</span>

@@ -11,6 +11,7 @@ const database_js_1 = __importDefault(require("../src/config/database.js"));
 const auth_routes_js_1 = __importDefault(require("./routes/auth/auth.routes.js"));
 const error_middleware_js_1 = __importDefault(require("./middlewares/error.middleware.js"));
 const user_routes_js_1 = __importDefault(require("./routes/user/user.routes.js"));
+const meetings_routes_js_1 = __importDefault(require("./routes/user/meetings.routes.js"));
 const app = (0, express_1.default)();
 (0, database_js_1.default)();
 app.use(express_1.default.json());
@@ -23,5 +24,6 @@ app.use((0, cors_1.default)({
 }));
 app.use("/api/auth", auth_routes_js_1.default);
 app.use("/api/user", user_routes_js_1.default);
+app.use("/api/user", meetings_routes_js_1.default);
 app.use(error_middleware_js_1.default);
 exports.default = app;

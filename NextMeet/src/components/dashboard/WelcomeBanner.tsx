@@ -1,5 +1,9 @@
 
+import { useNavigate } from "react-router-dom";
+
 const WelcomeBanner = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="relative min-h-[180px] overflow-hidden rounded-2xl bg-[#5146e5] px-7 py-7 text-white">
       <div>
@@ -13,11 +17,15 @@ const WelcomeBanner = () => {
         </p>
 
         <div className="mt-6 flex items-center gap-8">
-          <button className="rounded-full bg-white px-6 py-2.5 text-[12px] font-medium text-[#5146e5]">
+          <button
+            type="button"
+            onClick={() => navigate("/create-meeting")}
+            className="rounded-full bg-white px-6 py-2.5 text-[12px] font-medium text-[#5146e5]"
+          >
             Create Meeting
           </button>
 
-          <button className="text-[12px] font-medium text-white">
+          <button className="text-[12px] font-medium text-white" type="button">
             Join Meeting
           </button>
         </div>
