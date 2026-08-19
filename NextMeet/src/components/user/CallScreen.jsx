@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import ChatSideBar from "./ChatSideBar";
-import { Mic, MicOff, Video, VideoOff } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
 
 const ICE_SERVERS = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -10,6 +10,9 @@ const ICE_SERVERS = {
 
 export default function CallScreen() {
   const { meetingCode } = useParams();
+  const location = useLocation();
+  const initialCamOn = location.state?.camOn ?? true;
+  const initialMicOn = location.state?.micOn ?? true;
   const [socket, setSocket] = useState(null);
   const [joinError, setJoinError] = useState("");
   const localVideoRef = useRef(null);
@@ -17,8 +20,10 @@ export default function CallScreen() {
   const localStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const remoteSocketIdRef = useRef(null);
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
+  const pendingIceCandidatesRef = useRef([]);
+  const [micOn, setMicOn] = useState(initialMicOn);
+  const [camOn, setCamOn] = useState(initialCamOn);
+  const navigate = useNavigate();
 
   const toggleMic = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
@@ -42,6 +47,13 @@ export default function CallScreen() {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: true,
       audio: true,
+    });
+
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = initialMicOn;
+    });
+    stream.getVideoTracks().forEach((track) => {
+      track.enabled = initialCamOn;
     });
 
     localStreamRef.current = stream;
@@ -93,9 +105,24 @@ export default function CallScreen() {
     }
 
     pc.ontrack = (event) => {
-      const [remoteStream] = event.streams;
-      if (remoteVideoRef.current && remoteStream) {
-        remoteVideoRef.current.srcObject = remoteStream;
+      if (!remoteVideoRef.current) return;
+
+      if (event.streams[0]) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+        return;
+      }
+
+      const remoteStream =
+        remoteVideoRef.current.srcObject instanceof MediaStream
+          ? remoteVideoRef.current.srcObject
+          : new MediaStream();
+      remoteStream.addTrack(event.track);
+      remoteVideoRef.current.srcObject = remoteStream;
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+        console.warn("Peer connection ended for:", remoteSocketId);
       }
     };
 
@@ -106,12 +133,6 @@ export default function CallScreen() {
           candidate: event.candidate,
           to: remoteSocketId,
         });
-      }
-    };
-
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-        console.warn("Peer connection ended for:", remoteSocketId);
       }
     };
 
@@ -175,6 +196,11 @@ export default function CallScreen() {
 
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
 
+      for (const candidate of pendingIceCandidatesRef.current) {
+        await pc.addIceCandidate(candidate);
+      }
+      pendingIceCandidatesRef.current = [];
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
@@ -189,9 +215,13 @@ export default function CallScreen() {
     newSocket.on("webrtc-answer", async ({ answer, from }) => {
       if (!answer || !peerConnectionRef.current) return;
       remoteSocketIdRef.current = from || remoteSocketIdRef.current;
-      await peerConnectionRef.current.setRemoteDescription(
-        new RTCSessionDescription(answer),
-      );
+      const peerConnection = peerConnectionRef.current;
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+
+      for (const candidate of pendingIceCandidatesRef.current) {
+        await peerConnection.addIceCandidate(candidate);
+      }
+      pendingIceCandidatesRef.current = [];
     });
 
     // ICE candidates trickling in from the peer
@@ -199,9 +229,12 @@ export default function CallScreen() {
       if (!candidate || !peerConnectionRef.current) return;
       remoteSocketIdRef.current = from || remoteSocketIdRef.current;
       try {
-        await peerConnectionRef.current.addIceCandidate(
-          new RTCIceCandidate(candidate),
-        );
+        const iceCandidate = new RTCIceCandidate(candidate);
+        if (!peerConnectionRef.current.remoteDescription) {
+          pendingIceCandidatesRef.current.push(iceCandidate);
+          return;
+        }
+        await peerConnectionRef.current.addIceCandidate(iceCandidate);
       } catch (err) {
         console.error("Failed to add ICE candidate:", err);
       }
@@ -230,6 +263,17 @@ export default function CallScreen() {
       localStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
+
+  const leaveCall = () => {
+    localStreamRef.current?.getTracks().forEach((track) => track.stop());
+
+    peerConnectionRef.current?.close();
+    peerConnectionRef.current = null;
+
+    socket?.disconnect();
+
+    navigate("/dashboard");
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0b10] p-4 text-white md:p-6">
@@ -289,6 +333,13 @@ export default function CallScreen() {
                 }`}
               >
                 {camOn ? <Video size={18} /> : <VideoOff size={18} />}
+              </button>
+
+              <button
+                onClick={leaveCall}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-red-600 text-white transition hover:bg-red-700"
+              >
+                <PhoneOff size={18} />
               </button>
             </div>
           </div>

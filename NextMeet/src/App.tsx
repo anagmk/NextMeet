@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { io } from "socket.io-client";
 
@@ -9,6 +10,12 @@ import Profile from "./pages/user/Profile.jsx";
 import ScheduleMeeting from "./pages/user/NewMeeting.jsx";
 import JoinLobby from "./components/user/JoinLobby.jsx";
 import CallScreen from "./components/user/CallScreen.jsx";
+
+function MeetingRoute() {
+  const location = useLocation();
+
+  return location.state?.skipLobby ? <CallScreen /> : <JoinLobby />;
+}
 
 function App() {
   useEffect(() => {
@@ -37,7 +44,7 @@ function App() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/create-meeting" element={<ScheduleMeeting />} />
       <Route path="/join/:meetingCode" element={<JoinLobby />} />
-      <Route path="/meet/:meetingCode" element={<CallScreen />} />
+      <Route path="/meet/:meetingCode" element={<MeetingRoute />} />
       <Route path="/join" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

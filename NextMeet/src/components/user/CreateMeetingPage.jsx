@@ -73,7 +73,7 @@ function ScheduleMeeting() {
     e.preventDefault();
     const meeting = await createMeeting();
     if (meeting) {
-      navigate(`/meet/${meeting.meetingCode}`);
+      navigate(`/meet/${meeting.meetingCode}`, { state: { skipLobby: true } });
     }
   };
 
@@ -81,7 +81,7 @@ function ScheduleMeeting() {
   const handleGenerateLink = async () => {
     const meeting = await createMeeting();
     if (meeting) {
-      setMeetingLink(`${window.location.origin}/meet/${meeting.meetingCode}`);
+      setMeetingLink(`${window.location.origin}/join/${meeting.meetingCode}`);
     }
   };
 

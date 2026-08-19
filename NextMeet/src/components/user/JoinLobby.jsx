@@ -1,20 +1,23 @@
 // JoinLobby.jsx
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Mic, MicOff, Video, VideoOff, ArrowLeft } from "lucide-react";
 
 export default function JoinLobby() {
   const { meetingCode } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
+  const localVideoRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const initialCamOn = location.state?.camOn ?? true;
+  const initialMicOn = location.state?.micOn ?? true;
 
   const [meeting, setMeeting] = useState(null);
   const [loadingMeeting, setLoadingMeeting] = useState(true);
   const [error, setError] = useState("");
 
-  const [camOn, setCamOn] = useState(true);
-  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(initialCamOn);
+  const [micOn, setMicOn] = useState(initialMicOn);
   const [mediaError, setMediaError] = useState("");
   const [joining, setJoining] = useState(false);
 
@@ -39,29 +42,39 @@ export default function JoinLobby() {
 
   // 2. Start camera/mic preview
   useEffect(() => {
-    const startMedia = async () => {
+    async function startLocalMedia() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
         });
-        streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
+
+        // apply lobby preferences right away
+        stream.getAudioTracks().forEach((track) => {
+          track.enabled = initialMicOn;
+        });
+        stream.getVideoTracks().forEach((track) => {
+          track.enabled = initialCamOn;
+        });
+
+        localStreamRef.current = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
       } catch (err) {
-        setMediaError("Camera/mic permission denied or unavailable");
+        console.error("Failed to get local media:", err);
       }
-    };
-    startMedia();
+    }
+    startLocalMedia();
 
     return () => {
-      // cleanup: stop tracks when leaving lobby
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      localStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
   // 3. Toggle camera on/off (disables track, doesn't destroy stream)
   const toggleCam = () => {
-    const track = streamRef.current?.getVideoTracks()[0];
+    const track = localStreamRef.current?.getVideoTracks()[0];
     if (track) {
       track.enabled = !track.enabled;
       setCamOn(track.enabled);
@@ -70,7 +83,7 @@ export default function JoinLobby() {
 
   // 4. Toggle mic on/off
   const toggleMic = () => {
-    const track = streamRef.current?.getAudioTracks()[0];
+    const track = localStreamRef.current?.getAudioTracks()[0];
     if (track) {
       track.enabled = !track.enabled;
       setMicOn(track.enabled);
@@ -89,13 +102,15 @@ export default function JoinLobby() {
         body: JSON.stringify({ meetingCode }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to join meeting");
+      if (!res.ok && data.message !== "User already joined the meeting") {
+        throw new Error(data.message || "Failed to join meeting");
+      }
 
       // stop preview stream here — the call screen will request its own
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      localStreamRef.current?.getTracks().forEach((track) => track.stop());
 
       navigate(`/meet/${meetingCode}`, {
-        state: { camOn, micOn }, // pass initial device state into the call screen
+        state: { skipLobby: true, camOn, micOn },
       });
     } catch (err) {
       setError(err.message);
@@ -104,14 +119,21 @@ export default function JoinLobby() {
   };
 
   if (loadingMeeting) {
-    return <div className="p-8 text-center text-sm text-gray-500">Loading meeting...</div>;
+    return (
+      <div className="p-8 text-center text-sm text-gray-500">
+        Loading meeting...
+      </div>
+    );
   }
 
   if (error && !meeting) {
     return (
       <div className="p-8 text-center">
         <p className="mb-4 text-red-600">{error}</p>
-        <button onClick={() => navigate("/dashboard")} className="text-[#5b3fd6]">
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="text-[#5b3fd6]"
+        >
           Back to dashboard
         </button>
       </div>
@@ -129,7 +151,9 @@ export default function JoinLobby() {
           Back
         </button>
 
-        <h1 className="mb-1 text-2xl font-bold text-[#171a3a]">{meeting.title}</h1>
+        <h1 className="mb-1 text-2xl font-bold text-[#171a3a]">
+          {meeting.title}
+        </h1>
         <p className="mb-6 text-sm text-[#656982]">
           Hosted by {meeting.hostId?.name || "Unknown"}
         </p>
@@ -138,7 +162,7 @@ export default function JoinLobby() {
         <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-2xl bg-black">
           {camOn ? (
             <video
-              ref={videoRef}
+              ref={localVideoRef}
               autoPlay
               muted
               playsInline
@@ -178,7 +202,9 @@ export default function JoinLobby() {
           </button>
         </div>
 
-        {error && <p className="mb-4 text-center text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="mb-4 text-center text-sm text-red-600">{error}</p>
+        )}
 
         <button
           onClick={handleJoin}
