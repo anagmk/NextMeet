@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import ChatSideBar from "./ChatSideBar";
+import { Mic, MicOff, Video, VideoOff } from "lucide-react";
 
 const ICE_SERVERS = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -16,6 +17,24 @@ export default function CallScreen() {
   const localStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const remoteSocketIdRef = useRef(null);
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
+
+  const toggleMic = () => {
+    const track = localStreamRef.current?.getAudioTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setMicOn(track.enabled);
+    }
+  };
+
+  const toggleCam = () => {
+    const track = localStreamRef.current?.getVideoTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setCamOn(track.enabled);
+    }
+  };
 
   const ensureLocalStream = async () => {
     if (localStreamRef.current) return localStreamRef.current;
@@ -57,7 +76,10 @@ export default function CallScreen() {
 
   // Create the peer connection once, reused throughout the call
   function createPeerConnection(remoteSocketId, socketInstance) {
-    if (peerConnectionRef.current && remoteSocketIdRef.current === remoteSocketId) {
+    if (
+      peerConnectionRef.current &&
+      remoteSocketIdRef.current === remoteSocketId
+    ) {
       return peerConnectionRef.current;
     }
 
@@ -119,7 +141,7 @@ export default function CallScreen() {
 
       const stream = await ensureLocalStream();
       const pc = createPeerConnection(socketId, newSocket);
-      if (stream && !pc.signalingState || pc.signalingState === "stable") {
+      if ((stream && !pc.signalingState) || pc.signalingState === "stable") {
         stream.getTracks().forEach((track) => {
           if (!pc.getSenders().some((sender) => sender.track === track)) {
             pc.addTrack(track, stream);
@@ -168,7 +190,7 @@ export default function CallScreen() {
       if (!answer || !peerConnectionRef.current) return;
       remoteSocketIdRef.current = from || remoteSocketIdRef.current;
       await peerConnectionRef.current.setRemoteDescription(
-        new RTCSessionDescription(answer)
+        new RTCSessionDescription(answer),
       );
     });
 
@@ -178,7 +200,7 @@ export default function CallScreen() {
       remoteSocketIdRef.current = from || remoteSocketIdRef.current;
       try {
         await peerConnectionRef.current.addIceCandidate(
-          new RTCIceCandidate(candidate)
+          new RTCIceCandidate(candidate),
         );
       } catch (err) {
         console.error("Failed to add ICE candidate:", err);
@@ -246,11 +268,38 @@ export default function CallScreen() {
                 className="max-h-full max-w-[45%] rounded-2xl border border-white/15 bg-[#141923]"
               />
             </div>
+            <div className="flex justify-center gap-4 border-t border-white/10 px-5 py-4">
+              <button
+                onClick={toggleMic}
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
+                  micOn
+                    ? "bg-[#282832] text-white hover:bg-[#33333f]"
+                    : "bg-red-500/90 text-white hover:bg-red-500"
+                }`}
+              >
+                {micOn ? <Mic size={18} /> : <MicOff size={18} />}
+              </button>
+
+              <button
+                onClick={toggleCam}
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
+                  camOn
+                    ? "bg-[#282832] text-white hover:bg-[#33333f]"
+                    : "bg-red-500/90 text-white hover:bg-red-500"
+                }`}
+              >
+                {camOn ? <Video size={18} /> : <VideoOff size={18} />}
+              </button>
+            </div>
           </div>
         </main>
 
         <div className="w-[300px] shrink-0">
-          <ChatSideBar socket={socket} meetingCode={meetingCode} onClose={() => {}} />
+          <ChatSideBar
+            socket={socket}
+            meetingCode={meetingCode}
+            onClose={() => {}}
+          />
         </div>
       </div>
     </div>
