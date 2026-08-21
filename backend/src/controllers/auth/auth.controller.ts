@@ -124,15 +124,6 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
-export const logout = (req: Request, res: Response) => {
-  const { refreshToken: bodyRefreshToken } = req.body as { refreshToken?: string };
-  const refreshToken = bodyRefreshToken ?? req.cookies?.refreshToken;
-  if (refreshToken) revokeRefreshToken(refreshToken);
-  res.clearCookie("token", { httpOnly: true, secure: COOKIE_OPTIONS.secure, sameSite: "lax" });
-  res.clearCookie("refreshToken", { httpOnly: true, secure: COOKIE_OPTIONS.secure, sameSite: "lax" });
-  res.status(200).json({ message: "Logged out successfully" });
-};
-
 export const googleAuthCallback = (req: Request, res: Response) => {
   try {
     const user = req.user as import("../../models/user.model").IUser | undefined;
@@ -156,5 +147,21 @@ export const profile = (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ message: 'Error fetching profile', error });
   }
+};
+
+export const logout = (req: Request, res: Response) => {
+ try {
+  const { refreshToken: bodyRefreshToken } = req.body as { refreshToken?: string };
+
+  const refreshToken = bodyRefreshToken ?? req.cookies?.refreshToken;
+  if (refreshToken) revokeRefreshToken(refreshToken);
+
+  res.clearCookie("token", { httpOnly: true, secure: COOKIE_OPTIONS.secure, sameSite: "lax" });
+  res.clearCookie("refreshToken", { httpOnly: true, secure: COOKIE_OPTIONS.secure, sameSite: "lax" });
+  res.status(200).json({ message: "Logged out successfully" });
+  
+ } catch (error) {
+  res.status(500).json({ message: "Error occurred while logging out", error });
+ }
 };
 

@@ -31,7 +31,7 @@ const DashboardNavbar = () => {
           <button
             type="button"
             className="text-gray-600 hover:text-gray-900"
-            onClick={() => navigate("/create-meeting")}
+            onClick={() => navigate("/join-meeting")}
           >
             Join
           </button>

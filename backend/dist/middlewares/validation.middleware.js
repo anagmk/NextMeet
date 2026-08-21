@@ -3,10 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.authorizeRole = exports.authenticateUser = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const user_model_1 = __importDefault(require("../models/user.model"));
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
-async function authenticateUser(req, res, next) {
+const authenticateUser = async (req, res, next) => {
     try {
         const token = req.cookies?.token;
         if (!token) {
@@ -36,8 +37,9 @@ async function authenticateUser(req, res, next) {
     catch (err) {
         next(err);
     }
-}
-function authorizeRole(...allowedRoles) {
+};
+exports.authenticateUser = authenticateUser;
+const authorizeRole = (...allowedRoles) => {
     return (req, res, next) => {
         const requestUser = req.user;
         if (!requestUser?.role) {
@@ -48,8 +50,5 @@ function authorizeRole(...allowedRoles) {
         }
         next();
     };
-}
-exports.default = {
-    authenticateUser,
-    authorizeRole,
 };
+exports.authorizeRole = authorizeRole;

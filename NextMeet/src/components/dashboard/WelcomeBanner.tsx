@@ -25,7 +25,8 @@ const WelcomeBanner = () => {
             Create Meeting
           </button>
 
-          <button className="text-[12px] font-medium text-white" type="button">
+          <button className="text-[12px] font-medium text-white" type="button"
+           onClick={() => navigate("/join-meeting")}>
             Join Meeting
           </button>
         </div>

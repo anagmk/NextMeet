@@ -1,12 +1,30 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Send } from "lucide-react";
 import { useUser } from "../../context/UserContext";
+import type { Socket } from "socket.io-client";
 
-const ChatSideBar = ({ onClose = () => {}, socket, meetingCode }) => {
+type Message = {
+  _id?: string;
+  id?: string;
+  senderId?: string | { _id?: string; name?: string };
+  sender?: string;
+  timestamp?: string;
+  createdAt?: string;
+  message?: string;
+  content?: string;
+};
+
+type ChatSideBarProps = {
+  onClose?: () => void;
+  socket: Socket | null;
+  meetingCode?: string;
+};
+
+const ChatSideBar = ({ onClose = () => {}, socket, meetingCode }: ChatSideBarProps) => {
   const { user } = useUser();
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -35,7 +53,7 @@ const ChatSideBar = ({ onClose = () => {}, socket, meetingCode }) => {
   useEffect(() => {
     if (!socket) return;
 
-    const handleReceiveMessage = (payload) => {
+    const handleReceiveMessage = (payload: Message) => {
       setMessages((prev) => {
         const exists = prev.some((msg) => {
           const existingId = msg._id || msg.id;
@@ -66,7 +84,7 @@ const ChatSideBar = ({ onClose = () => {}, socket, meetingCode }) => {
     setInput("");
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleSend();
   };
 
@@ -89,10 +107,12 @@ const ChatSideBar = ({ onClose = () => {}, socket, meetingCode }) => {
       {/* Messages */}
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages.map((msg, index) => {
-          const senderId = msg.senderId?._id || msg.senderId;
+          const senderId = typeof msg.senderId === "object"
+            ? msg.senderId._id
+            : msg.senderId;
           const isOwn = String(senderId) === String(user?._id);
-          const senderName = msg.sender || msg.senderId?.name || "Unknown";
-          const timestamp = msg.timestamp || msg.createdAt;
+          const senderName = msg.sender || (typeof msg.senderId === "object" ? msg.senderId.name : undefined) || "Unknown";
+          const timestamp = msg.timestamp || msg.createdAt || Date.now();
           const time = new Date(timestamp).toLocaleTimeString([], {
             hour: "numeric",
             minute: "2-digit",

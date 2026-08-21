@@ -14,7 +14,7 @@ export interface IMeeting extends Document {
   meetingCode: string;
   scheduledAt: Date;
   duration?: number;
-  status: "scheduled" | "active" | "completed";
+  status: "scheduled" | "active" | "completed" | "cancelled";
   participants: IParticipant[];
   closedAt?: Date;
   createdAt: Date;
@@ -40,7 +40,7 @@ const meetingSchema = new Schema<IMeeting>(
     duration: { type: Number }, // in minutes, optional
     status: {
       type: String,
-      enum: ["scheduled", "active", "completed"],
+      enum: ["scheduled", "active", "completed","cancelled"],
       default: "scheduled",
     },
     participants: { type: [participantSchema], default: [] },

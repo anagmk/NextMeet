@@ -50,14 +50,15 @@ export const getMeetings = async (req: Request, res: Response) => {
     const userId = (req.user as { _id?: string } | undefined)?._id;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
-    const meetings = await Meeting.find({ "participants.userId": userId });
-    // `find` returns an array; return empty array when none found instead of 404
-    if (!meetings || meetings.length === 0) return res.status(200).json([]);
+    const meetings = await Meeting.find({ "participants.userId": userId })
+      .populate("hostId", "name email")
+      .sort({ scheduledAt: -1 });
+
     res.status(200).json(meetings);
   } catch (error) {
     res.status(500).json({ message: "Error fetching meetings", error });
   }
-}
+};
 
 export const getMeetingById = async (req: Request, res: Response) => {
   try {
@@ -173,7 +174,7 @@ export const meetingHistory = async (req: Request, res: Response) => {
     const userId = (req.user as { _id?: string } | undefined)?._id;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
-    const meetings = await Meeting.find({ "participants.userId": userId, status: "completed" });
+    const meetings = await Meeting.find({ "participants.userId": userId, status: { $in: ["completed", "cancelled", "active"] }}).sort({ scheduledAt: -1 });
    
     if (!meetings || meetings.length === 0) return res.status(200).json([]);
     res.status(200).json(meetings);

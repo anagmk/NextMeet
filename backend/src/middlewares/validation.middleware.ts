@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model";
 import ApiError from "../utils/ApiError";
 
-async function authenticateUser(req: Request, res: Response, next: NextFunction) {
+export const authenticateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.cookies?.token;
 
@@ -39,7 +39,7 @@ async function authenticateUser(req: Request, res: Response, next: NextFunction)
   }
 }
 
-function authorizeRole(...allowedRoles: string[]) {
+export const authorizeRole = (...allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const requestUser = req.user as { role?: string } | undefined;
     if (!requestUser?.role) {
@@ -53,8 +53,3 @@ function authorizeRole(...allowedRoles: string[]) {
     next();
   };
 }
-
-export default {
-  authenticateUser,
-  authorizeRole,
-};

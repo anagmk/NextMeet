@@ -23,7 +23,7 @@ function ScheduleMeeting() {
   const [error, setError] = useState("");
   const [meetingLink, setMeetingLink] = useState(""); // shown after "Generate Invite Link"
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -61,7 +61,7 @@ function ScheduleMeeting() {
 
       return await res.json(); // the saved meeting doc, includes meetingCode
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : "Failed to create meeting");
       return null;
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ function ScheduleMeeting() {
   };
 
   // "Create Meeting" button — creates it and takes the host straight into the call
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const meeting = await createMeeting();
     if (meeting) {
@@ -139,7 +139,7 @@ function ScheduleMeeting() {
                   <input
                     readOnly
                     value={meetingLink}
-                    onClick={(e) => e.target.select()}
+                    onClick={(e) => e.currentTarget.select()}
                     className="h-10 flex-1 rounded-lg border border-[#dedee8] bg-white px-3 text-sm text-[#30344f]"
                   />
                   <button

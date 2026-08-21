@@ -49,7 +49,7 @@ const meetingSchema = new mongoose_1.Schema({
     duration: { type: Number }, // in minutes, optional
     status: {
         type: String,
-        enum: ["scheduled", "active", "completed"],
+        enum: ["scheduled", "active", "completed", "cancelled"],
         default: "scheduled",
     },
     participants: { type: [participantSchema], default: [] },

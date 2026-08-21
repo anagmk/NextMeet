@@ -9,13 +9,7 @@ const express_1 = __importDefault(require("express"));
 const router = express_1.default.Router();
 router.get("/google", passport_js_1.default.authenticate("google", { scope: ["profile", "email"], session: false }));
 router.get("/google/callback", passport_js_1.default.authenticate("google", { failureRedirect: `${process.env.CLIENT_URL}/login`, session: false }), auth_controller_js_1.googleAuthCallback);
-router.get("/signup", (req, res) => {
-    res.send("Signup page");
-});
 router.post("/signup", auth_controller_js_1.signup);
-router.get("/login", (req, res) => {
-    res.send("Login page");
-});
 router.post("/login", auth_controller_js_1.login);
 router.post("/refresh", auth_controller_js_1.refresh);
 router.post("/logout", auth_controller_js_1.logout);

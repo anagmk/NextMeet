@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { io } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 import ChatSideBar from "./ChatSideBar";
 import { Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
+import Editor from "@monaco-editor/react";
 
 const ICE_SERVERS = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -13,17 +15,20 @@ export default function CallScreen() {
   const location = useLocation();
   const initialCamOn = location.state?.camOn ?? true;
   const initialMicOn = location.state?.micOn ?? true;
-  const [socket, setSocket] = useState(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [joinError, setJoinError] = useState("");
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const localStreamRef = useRef(null);
-  const peerConnectionRef = useRef(null);
-  const remoteSocketIdRef = useRef(null);
-  const pendingIceCandidatesRef = useRef([]);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const remoteSocketIdRef = useRef<string | null>(null);
+  const pendingIceCandidatesRef = useRef<RTCIceCandidate[]>([]);
   const [micOn, setMicOn] = useState(initialMicOn);
   const [camOn, setCamOn] = useState(initialCamOn);
   const navigate = useNavigate();
+
+  const [code, setCode] = useState("// start coding here");
+  const isRemoteUpdate = useRef(false);
 
   const toggleMic = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
@@ -80,14 +85,21 @@ export default function CallScreen() {
           throw new Error(data.message || "Failed to join meeting");
         }
       } catch (error) {
-        setJoinError(error.message || "Unable to join this meeting.");
+        setJoinError(
+          error instanceof Error
+            ? error.message
+            : "Unable to join this meeting.",
+        );
       }
     };
     autoJoinMeeting();
   }, [meetingCode]);
 
   // Create the peer connection once, reused throughout the call
-  function createPeerConnection(remoteSocketId, socketInstance) {
+  function createPeerConnection(
+    remoteSocketId: string,
+    socketInstance: Socket,
+  ) {
     if (
       peerConnectionRef.current &&
       remoteSocketIdRef.current === remoteSocketId
@@ -155,7 +167,7 @@ export default function CallScreen() {
     });
 
     // Someone else joined AFTER us — WE create the offer
-    newSocket.on("user-joined", async ({ socketId }) => {
+    newSocket.on("user-joined", async ({ socketId }: { socketId: string }) => {
       console.log("Another user joined:", socketId);
 
       if (!socketId || socketId === newSocket.id) return;
@@ -181,63 +193,97 @@ export default function CallScreen() {
     });
 
     // We received an offer — WE are the new joiner, create an answer
-    newSocket.on("webrtc-offer", async ({ offer, from }) => {
-      if (!from || from === newSocket.id) return;
+    newSocket.on(
+      "webrtc-offer",
+      async ({
+        offer,
+        from,
+      }: {
+        offer: RTCSessionDescriptionInit;
+        from: string;
+      }) => {
+        if (!from || from === newSocket.id) return;
 
-      const stream = await ensureLocalStream();
-      const pc = createPeerConnection(from, newSocket);
-      if (stream && pc.signalingState === "stable") {
-        stream.getTracks().forEach((track) => {
-          if (!pc.getSenders().some((sender) => sender.track === track)) {
-            pc.addTrack(track, stream);
-          }
+        const stream = await ensureLocalStream();
+        const pc = createPeerConnection(from, newSocket);
+        if (stream && pc.signalingState === "stable") {
+          stream.getTracks().forEach((track) => {
+            if (!pc.getSenders().some((sender) => sender.track === track)) {
+              pc.addTrack(track, stream);
+            }
+          });
+        }
+
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+        for (const candidate of pendingIceCandidatesRef.current) {
+          await pc.addIceCandidate(candidate);
+        }
+        pendingIceCandidatesRef.current = [];
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        newSocket.emit("webrtc-answer", {
+          meetingCode,
+          answer,
+          to: from,
         });
-      }
-
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-
-      for (const candidate of pendingIceCandidatesRef.current) {
-        await pc.addIceCandidate(candidate);
-      }
-      pendingIceCandidatesRef.current = [];
-
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      newSocket.emit("webrtc-answer", {
-        meetingCode,
-        answer,
-        to: from,
-      });
-    });
+      },
+    );
 
     // Our offer got answered
-    newSocket.on("webrtc-answer", async ({ answer, from }) => {
-      if (!answer || !peerConnectionRef.current) return;
-      remoteSocketIdRef.current = from || remoteSocketIdRef.current;
-      const peerConnection = peerConnectionRef.current;
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    newSocket.on(
+      "webrtc-answer",
+      async ({
+        answer,
+        from,
+      }: {
+        answer: RTCSessionDescriptionInit;
+        from: string;
+      }) => {
+        if (!answer || !peerConnectionRef.current) return;
+        remoteSocketIdRef.current = from || remoteSocketIdRef.current;
+        const peerConnection = peerConnectionRef.current;
+        await peerConnection.setRemoteDescription(
+          new RTCSessionDescription(answer),
+        );
 
-      for (const candidate of pendingIceCandidatesRef.current) {
-        await peerConnection.addIceCandidate(candidate);
-      }
-      pendingIceCandidatesRef.current = [];
-    });
+        for (const candidate of pendingIceCandidatesRef.current) {
+          await peerConnection.addIceCandidate(candidate);
+        }
+        pendingIceCandidatesRef.current = [];
+      },
+    );
 
     // ICE candidates trickling in from the peer
-    newSocket.on("webrtc-ice-candidate", async ({ candidate, from }) => {
-      if (!candidate || !peerConnectionRef.current) return;
-      remoteSocketIdRef.current = from || remoteSocketIdRef.current;
-      try {
-        const iceCandidate = new RTCIceCandidate(candidate);
-        if (!peerConnectionRef.current.remoteDescription) {
-          pendingIceCandidatesRef.current.push(iceCandidate);
-          return;
+    newSocket.on(
+      "webrtc-ice-candidate",
+      async ({
+        candidate,
+        from,
+      }: {
+        candidate: RTCIceCandidateInit;
+        from: string;
+      }) => {
+        if (!candidate || !peerConnectionRef.current) return;
+        remoteSocketIdRef.current = from || remoteSocketIdRef.current;
+        try {
+          const iceCandidate = new RTCIceCandidate(candidate);
+          if (!peerConnectionRef.current.remoteDescription) {
+            pendingIceCandidatesRef.current.push(iceCandidate);
+            return;
+          }
+          await peerConnectionRef.current.addIceCandidate(iceCandidate);
+        } catch (err) {
+          console.error("Failed to add ICE candidate:", err);
         }
-        await peerConnectionRef.current.addIceCandidate(iceCandidate);
-      } catch (err) {
-        console.error("Failed to add ICE candidate:", err);
-      }
+      },
+    );
+
+    newSocket.on("code-change", ({ code: incomingCode }) => {
+      isRemoteUpdate.current = true;
+      setCode(incomingCode);
     });
 
     setSocket(newSocket);
@@ -275,6 +321,19 @@ export default function CallScreen() {
     navigate("/dashboard");
   };
 
+  const handleEditorChange = (value: string | undefined) => {
+    const nextCode = value ?? "";
+    setCode(nextCode);
+
+    // don't re-broadcast a change that just arrived FROM the socket
+    if (isRemoteUpdate.current) {
+      isRemoteUpdate.current = false;
+      return;
+    }
+
+    socket?.emit("code-change", { meetingCode, code: nextCode });
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0b10] p-4 text-white md:p-6">
       {joinError && (
@@ -310,6 +369,19 @@ export default function CallScreen() {
                 playsInline
                 muted
                 className="max-h-full max-w-[45%] rounded-2xl border border-white/15 bg-[#141923]"
+              />
+            </div>
+            <div className="h-[500px] w-full overflow-hidden rounded-2xl border border-white/10">
+              <Editor
+                height="100%"
+                defaultLanguage="javascript"
+                value={code}
+                onChange={handleEditorChange}
+                theme="vs-dark"
+                options={{
+                  fontSize: 14,
+                  minimap: { enabled: false },
+                }}
               />
             </div>
             <div className="flex justify-center gap-4 border-t border-white/10 px-5 py-4">

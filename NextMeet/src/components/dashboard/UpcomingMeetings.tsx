@@ -1,4 +1,6 @@
 
+import { useNavigate } from "react-router-dom";
+
 interface UpcomingProps {
   day: string;
   date: string;
@@ -39,6 +41,8 @@ const UpcomingItem = ({
 };
 
 const UpcomingMeetings = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="rounded-2xl bg-white px-5 py-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
       <div className="mb-3 flex items-start justify-between">
@@ -48,7 +52,11 @@ const UpcomingMeetings = () => {
           Meetings
         </h2>
 
-        <button className="text-[10px] text-[#5146e5]">
+        <button
+          type="button"
+          onClick={() => navigate("/meetings")}
+          className="text-[10px] text-[#5146e5]"
+        >
           View calendar
         </button>
       </div>

@@ -3,22 +3,27 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Mic, MicOff, Video, VideoOff, ArrowLeft } from "lucide-react";
 
+type Meeting = {
+  title: string;
+  hostId?: { name?: string };
+};
+
 export default function JoinLobby() {
   const { meetingCode } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const localVideoRef = useRef(null);
-  const localStreamRef = useRef(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
   const initialCamOn = location.state?.camOn ?? true;
   const initialMicOn = location.state?.micOn ?? true;
 
-  const [meeting, setMeeting] = useState(null);
+  const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loadingMeeting, setLoadingMeeting] = useState(true);
   const [error, setError] = useState("");
 
   const [camOn, setCamOn] = useState(initialCamOn);
   const [micOn, setMicOn] = useState(initialMicOn);
-  const [mediaError, setMediaError] = useState("");
+  const [mediaError] = useState("");
   const [joining, setJoining] = useState(false);
 
   // 1. Fetch meeting info (does NOT join yet)
@@ -32,7 +37,7 @@ export default function JoinLobby() {
         if (!res.ok) throw new Error(data.message || "Meeting not found");
         setMeeting(data);
       } catch (err) {
-        setError(err.message);
+        setError(err instanceof Error ? err.message : "Meeting not found");
       } finally {
         setLoadingMeeting(false);
       }
@@ -113,7 +118,7 @@ export default function JoinLobby() {
         state: { skipLobby: true, camOn, micOn },
       });
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : "Failed to join meeting");
       setJoining(false);
     }
   };
@@ -139,6 +144,8 @@ export default function JoinLobby() {
       </div>
     );
   }
+
+  if (!meeting) return null;
 
   return (
     <div className="min-h-screen bg-[#f8f8fc] px-4 py-6 sm:px-6 lg:px-8">

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.profile = exports.googleAuthCallback = exports.logout = exports.refresh = exports.login = exports.signup = void 0;
+exports.logout = exports.profile = exports.googleAuthCallback = exports.refresh = exports.login = exports.signup = void 0;
 const user_model_js_1 = __importDefault(require("../../models/user.model.js"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -116,16 +116,6 @@ const refresh = async (req, res, next) => {
     }
 };
 exports.refresh = refresh;
-const logout = (req, res) => {
-    const { refreshToken: bodyRefreshToken } = req.body;
-    const refreshToken = bodyRefreshToken ?? req.cookies?.refreshToken;
-    if (refreshToken)
-        (0, token_service_js_1.revokeRefreshToken)(refreshToken);
-    res.clearCookie("token", { httpOnly: true, secure: COOKIE_OPTIONS.secure, sameSite: "lax" });
-    res.clearCookie("refreshToken", { httpOnly: true, secure: COOKIE_OPTIONS.secure, sameSite: "lax" });
-    res.status(200).json({ message: "Logged out successfully" });
-};
-exports.logout = logout;
 const googleAuthCallback = (req, res) => {
     try {
         const user = req.user;
@@ -152,3 +142,18 @@ const profile = (req, res) => {
     }
 };
 exports.profile = profile;
+const logout = (req, res) => {
+    try {
+        const { refreshToken: bodyRefreshToken } = req.body;
+        const refreshToken = bodyRefreshToken ?? req.cookies?.refreshToken;
+        if (refreshToken)
+            (0, token_service_js_1.revokeRefreshToken)(refreshToken);
+        res.clearCookie("token", { httpOnly: true, secure: COOKIE_OPTIONS.secure, sameSite: "lax" });
+        res.clearCookie("refreshToken", { httpOnly: true, secure: COOKIE_OPTIONS.secure, sameSite: "lax" });
+        res.status(200).json({ message: "Logged out successfully" });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Error occurred while logging out", error });
+    }
+};
+exports.logout = logout;
