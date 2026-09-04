@@ -2,11 +2,12 @@
   import cors from "cors";
   import cookieParser from "cookie-parser";
   import passport from "passport";
-  import connectDB from "../src/config/database.js";
+  import connectDB from "./config/database.js";
   import authRoutes from "./routes/auth/auth.routes.js";
   import errorHandler from "./middlewares/error.middleware.js";
   import userRoutes from "./routes/user/user.routes.js";
   import meetingsRoutes from "./routes/user/meetings.routes.js";
+  import questionRoutes from "./routes/user/question.routes.js";
 
   const app = express();
 
@@ -26,6 +27,7 @@
   app.use("/api/auth", authRoutes);
   app.use("/api/user", userRoutes);
   app.use("/api/user", meetingsRoutes);
+  app.use("/api/question", questionRoutes);
   app.use(errorHandler);
 
   export default app;
