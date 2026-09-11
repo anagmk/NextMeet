@@ -46,7 +46,7 @@ const ProfilePage = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/user/profile`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile`, {
           credentials: "include",
         });
 
@@ -99,7 +99,7 @@ const ProfilePage = () => {
         ...(isGoogleUser ? {} : { email: (form.email ?? "").trim().toLowerCase() }),
       };
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/user/profile`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile`, {
         method: "PATCH",
         credentials: "include",
         headers: {

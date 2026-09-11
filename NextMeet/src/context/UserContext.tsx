@@ -34,14 +34,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   async function refreshUser() {
     try {
-      let res = await fetch(`${import.meta.env.VITE_API_URL}/user/profile`, {
+      let res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile`, {
         credentials: "include",
       });
 
       if (res.status === 401) {
         try {
           await refreshAccessToken();
-          res = await fetch(`${import.meta.env.VITE_API_URL}/user/profile`, {
+          res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile`, {
             credentials: "include",
           });
         } catch {
