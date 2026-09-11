@@ -7,9 +7,9 @@ const JoinMeeting = () => {
     <div className="min-h-screen bg-[#fafafd]">
       <Sidebar />
 
-      <div className="ml-[250px]">
+      <div className="md:ml-[250px]">
         <Navbar />
-        <div className="min-h-screen bg-[#F8F8FC] p-6 text-dark md:p-10">
+        <div className="min-h-screen bg-[#F8F8FC] p-4 text-dark sm:p-6 md:p-10">
           <div className="mx-auto max-w-3xl">
             <div className="mb-6">
               <h1 className="text-2xl font-semibold">Meeting History</h1>

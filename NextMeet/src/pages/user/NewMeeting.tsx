@@ -8,7 +8,7 @@ const NewMeeting = () => {
 
       <Sidebar />
 
-      <div className="ml-[250px]">
+      <div className="md:ml-[250px]">
 
         <Navbar />
 

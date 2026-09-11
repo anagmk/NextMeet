@@ -67,9 +67,9 @@ export default function MeetingDetailsPage() {
     return (
       <div className="min-h-screen bg-[#fafafd]">
         <Sidebar />
-        <div className="ml-[250px]">
+        <div className="md:ml-[250px]">
           <Navbar />
-          <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-6">
+          <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-6 sm:px-6">
             <div className="rounded-2xl border border-[#e8e8ef] bg-white px-6 py-4 text-sm text-[#656982] shadow-sm">
               Loading meeting details...
             </div>
@@ -83,9 +83,9 @@ export default function MeetingDetailsPage() {
     return (
       <div className="min-h-screen bg-[#fafafd]">
         <Sidebar />
-        <div className="ml-[250px]">
+        <div className="md:ml-[250px]">
           <Navbar />
-          <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-6">
+          <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-6 sm:px-6">
             <div className="rounded-2xl border border-red-100 bg-white px-6 py-5 text-sm text-red-600 shadow-sm">
               {error || "Meeting not found."}
             </div>
@@ -111,10 +111,10 @@ export default function MeetingDetailsPage() {
     <div className="min-h-screen bg-[#fafafd]">
       <Sidebar />
 
-      <div className="ml-[250px]">
+      <div className="md:ml-[250px]">
         <Navbar />
 
-        <main className="px-6 py-8 lg:px-8">
+        <main className="px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-5xl">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>

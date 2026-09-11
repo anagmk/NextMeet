@@ -11,7 +11,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-[#f8f8fc]">
       <Sidebar />
 
-      <div className="ml-[250px] min-h-screen">
+      <div className="min-h-screen md:ml-[250px]">
         <Navbar />
 
         <main className="px-3 py-3 md:px-6">
