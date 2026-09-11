@@ -10,7 +10,10 @@
   import questionRoutes from "./routes/user/question.routes.js";
 
   const app = express();
-
+  const allowedOrigins = (process.env.CLIENT_URL ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
   connectDB();
 
@@ -20,7 +23,14 @@
   app.use(passport.initialize());
   app.use(
     cors({
-      origin: process.env.CLIENT_URL,
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error("Not allowed by CORS"));
+      },
       credentials: true,
     })
   );
