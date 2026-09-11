@@ -60,11 +60,12 @@ function parseDurationToMs(value: string | undefined, fallbackMs: number) {
 }
 
 const ACCESS_TOKEN_COOKIE_MS = parseDurationToMs(process.env.ACCESS_TOKEN_EXPIRES_IN, 15 * 60 * 1000);
+const isProduction = process.env.NODE_ENV === "production";
 
 const COOKIE_OPTIONS: import("express").CookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
   maxAge: ACCESS_TOKEN_COOKIE_MS,
 };
 
