@@ -30,7 +30,7 @@ export default function JoinLobby() {
   useEffect(() => {
     const fetchMeeting = async () => {
       try {
-        const res = await fetch(`/api/user/meetings/code/${meetingCode}`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/meetings/code/${meetingCode}`, {
           credentials: "include",
         });
         const data = await res.json();
@@ -100,7 +100,7 @@ export default function JoinLobby() {
     setJoining(true);
     setError("");
     try {
-      const res = await fetch("/api/user/meetings/join", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/meetings/join`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

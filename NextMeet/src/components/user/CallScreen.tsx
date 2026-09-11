@@ -68,7 +68,7 @@ export default function CallScreen() {
     const fetchMeeting = async () => {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/user/meetings/code/${meetingCode}`,
+          `${import.meta.env.VITE_API_URL}/api/user/meetings/code/${meetingCode}`,
           { credentials: "include" },
         );
         const data = await response.json();

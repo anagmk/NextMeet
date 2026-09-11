@@ -17,7 +17,7 @@ const DashboardNavbar = () => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/user/notifications`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/notifications`, {
         credentials: "include",
       });
       const data = await res.json().catch(() => ({ notifications: [] }));
@@ -44,7 +44,7 @@ const DashboardNavbar = () => {
     }
 
     if (!notification.isRead) {
-      await fetch(`${import.meta.env.VITE_API_URL}/user/notifications/${notification._id}/read`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/user/notifications/${notification._id}/read`, {
         method: "PATCH",
         credentials: "include",
       }).catch(() => undefined);

@@ -39,7 +39,7 @@ function ScheduleMeeting() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/user/meetings/create", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/meetings/create`, {
         method: "POST",
         credentials: "include", // sends httpOnly JWT cookie
         headers: { "Content-Type": "application/json" },

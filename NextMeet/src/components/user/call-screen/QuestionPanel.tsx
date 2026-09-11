@@ -73,7 +73,7 @@ const QuestionPanel = ({
 
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/question/generate`,
+        `${import.meta.env.VITE_API_URL}/api/question/generate`,
         {
           method: "POST",
           credentials: "include",
@@ -118,7 +118,7 @@ const QuestionPanel = ({
     setError("");
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/question/manual`,
+        `${import.meta.env.VITE_API_URL}/api/question/manual`,
         {
           method: "POST",
           credentials: "include",

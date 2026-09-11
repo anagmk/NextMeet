@@ -21,7 +21,7 @@ const Navbar = () => {
   const fetchNotifications = async () => {
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/user/notifications`,
+        `${import.meta.env.VITE_API_URL}/api/user/notifications`,
         {
           credentials: "include",
         },
@@ -42,7 +42,7 @@ const Navbar = () => {
     const loadNotifications = async () => {
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/user/notifications`,
+          `${import.meta.env.VITE_API_URL}/api/user/notifications`,
           {
             credentials: "include",
           },
@@ -83,7 +83,7 @@ const Navbar = () => {
     if (!notification.isRead) {
       try {
         await fetch(
-          `${import.meta.env.VITE_API_URL}/user/notifications/${notification._id}/read`,
+          `${import.meta.env.VITE_API_URL}/api/user/notifications/${notification._id}/read`,
           {
             method: "PATCH",
             credentials: "include",

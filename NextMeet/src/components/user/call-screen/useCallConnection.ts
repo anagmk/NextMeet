@@ -70,7 +70,7 @@ export default function useCallConnection({ meetingCode, initialMicOn, initialCa
     if (!meetingCode) return;
     const joinMeeting = async () => {
       try {
-        const response = await fetch("/api/user/meetings/join", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ meetingCode }) });
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/meetings/join`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ meetingCode }) });
         const data = await response.json().catch(() => ({}));
         if (!response.ok && data.message !== "User already joined the meeting") throw new Error(data.message || "Failed to join meeting");
       } catch (error) { setJoinError(error instanceof Error ? error.message : "Unable to join this meeting."); }

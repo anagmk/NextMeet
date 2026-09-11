@@ -67,7 +67,7 @@ export default function ReportPage() {
     const fetchReport = async () => {
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/user/meetings/${meetingCode}/report`,
+          `${import.meta.env.VITE_API_URL}/api/user/meetings/${meetingCode}/report`,
           { credentials: "include" },
         );
         const data = await res.json();
@@ -93,7 +93,7 @@ export default function ReportPage() {
     setSaveStatus("");
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/user/meetings/${meetingCode}/report`,
+        `${import.meta.env.VITE_API_URL}/api/user/meetings/${meetingCode}/report`,
         {
           method: "PATCH",
           credentials: "include",
@@ -118,7 +118,7 @@ export default function ReportPage() {
 
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/user/meetings/${meetingCode}/report/publish`,
+        `${import.meta.env.VITE_API_URL}/api/user/meetings/${meetingCode}/report/publish`,
         {
           method: "POST",
           credentials: "include",

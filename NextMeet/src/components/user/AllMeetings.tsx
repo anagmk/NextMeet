@@ -98,7 +98,7 @@ const MeetingsPage = () => {
           search,
         });
 
-        const response = await fetch(`${apiUrl}/user/meetings?${query.toString()}`, {
+        const response = await fetch(`${apiUrl}/api/user/meetings?${query.toString()}`, {
           credentials: "include",
         });
         const data = await response.json().catch(() => ({ meetings: [] }));
@@ -344,7 +344,7 @@ const MeetingRow = ({ meeting, onDelete }: MeetingRowProps) => {
     try {
       setDeleting(true);
       const apiUrl = (import.meta.env.VITE_API_URL ?? "/api").replace(/\/$/, "");
-      const response = await fetch(`${apiUrl}/user/meetings/${meeting.id}`, {
+      const response = await fetch(`${apiUrl}/api/user/meetings/${meeting.id}`, {
         method: "DELETE",
         credentials: "include",
       });

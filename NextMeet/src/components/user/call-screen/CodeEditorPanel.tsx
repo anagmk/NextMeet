@@ -149,7 +149,7 @@ export default function CodeEditorPanel({
     setTestResults([]);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/user/judge/run`,
+        `${import.meta.env.VITE_API_URL}/api/user/judge/run`,
         {
           method: "POST",
           credentials: "include",
@@ -218,7 +218,7 @@ export default function CodeEditorPanel({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/question/${question.questionId}/submit`,
+        `${import.meta.env.VITE_API_URL}/api/question/${question.questionId}/submit`,
         {
           method: "POST",
           credentials: "include",

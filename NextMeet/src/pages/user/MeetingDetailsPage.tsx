@@ -43,7 +43,7 @@ export default function MeetingDetailsPage() {
     const fetchDetails = async () => {
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/user/meetings/${meetingCode}/details`,
+          `${import.meta.env.VITE_API_URL}/api/user/meetings/${meetingCode}/details`,
           { credentials: "include" },
         );
         const data = await res.json();

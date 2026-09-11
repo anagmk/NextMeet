@@ -31,7 +31,7 @@ const ChatSideBar = ({ onClose = () => {}, socket, meetingCode }: ChatSideBarPro
       if (!meetingCode) return;
 
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/user/meetings/${meetingCode}/messages`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/meetings/${meetingCode}/messages`, {
           credentials: "include",
         });
 
