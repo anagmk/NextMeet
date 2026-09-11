@@ -1,4 +1,4 @@
-import { Search, Sun, Bell, Plus, ChevronDown } from "lucide-react";
+import { Sun, Bell, Plus, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
@@ -97,42 +97,30 @@ const Navbar = () => {
   };
 
   return (
-    <header className="flex h-20 items-center justify-between border-b border-[#e8e8ef] bg-white px-7 pl-10">
-      <div className="flex h-[46px] w-[355px] items-center gap-2.5 rounded-lg border border-[#dedee8] px-3.5 text-[#8589a2]">
-        <Search size={20} />
-
-        <input
-          type="text"
-          placeholder="Search meetings..."
-          className="flex-1 bg-transparent text-sm text-[#30344f] outline-none placeholder:text-[#999caf]"
-        />
-
-        <span className="text-xs text-[#999caf]">Ctrl + K</span>
-      </div>
-
-      <div className="flex items-center gap-[18px]">
+    <header className="flex h-20 items-center justify-end border-b border-[#e8e8ef] bg-white px-4 sm:px-5 md:px-7 md:pl-10">
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-[18px]">
         <button
-          className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#dedee8] bg-white text-[#30344f] transition hover:border-[#cfc5ff] hover:text-[#5b3fd6]"
+          className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[#dedee8] bg-white text-[#30344f] transition hover:border-[#cfc5ff] hover:text-[#5b3fd6] sm:flex"
           title="Change theme"
         >
-          <Sun size={20} />
+          <Sun size={18} />
         </button>
 
         <button
-          className="flex h-11 items-center gap-2 rounded-lg bg-[#5b3fd6] px-[18px] text-sm text-white transition hover:bg-[#4d32c5]"
+          className="flex h-10 items-center gap-1.5 rounded-lg bg-[#5b3fd6] px-3 text-sm font-medium text-white transition hover:bg-[#4d32c5] sm:gap-2 sm:px-[18px]"
           onClick={() => navigate("/create-meeting")}
         >
-          <Plus size={19} />
-          <span>New Meeting</span>
+          <Plus size={18} />
+          <span className="hidden sm:inline">New Meeting</span>
         </button>
 
         <div className="relative">
           <button
             type="button"
             onClick={() => setOpen((previous) => !previous)}
-            className="relative flex h-11 w-11 items-center justify-center rounded-lg text-[#30344f]"
+            className="relative flex h-10 w-10 items-center justify-center rounded-lg text-[#30344f]"
           >
-            <Bell size={21} />
+            <Bell size={20} />
             {unreadCount > 0 && (
               <span className="absolute right-1 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5b3fd6] px-1 text-[10px] text-white">
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -141,7 +129,7 @@ const Navbar = () => {
           </button>
 
           {open && (
-            <div className="absolute right-0 top-[52px] z-20 w-[320px] rounded-2xl border border-[#e8e8ef] bg-white p-3 shadow-xl">
+            <div className="absolute right-0 top-[52px] z-20 w-[300px] rounded-2xl border border-[#e8e8ef] bg-white p-3 shadow-xl sm:w-[320px]">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-semibold text-[#171a3a]">
                   Notifications
@@ -188,22 +176,22 @@ const Navbar = () => {
         </div>
 
         <button
-          className="flex items-center gap-2"
+          className="flex items-center gap-1.5 sm:gap-2"
           onClick={() => navigate("/profile")}
         >
           {user?.profileImage ? (
             <img
               src={user.profileImage}
               alt={user.name || "Profile"}
-              className="h-[42px] w-[42px] rounded-full object-cover"
+              className="h-9 w-9 rounded-full object-cover sm:h-[42px] sm:w-[42px]"
             />
           ) : (
-            <div className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[#5b5fef] text-sm font-semibold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#5b5fef] text-xs font-semibold text-white sm:h-[42px] sm:w-[42px] sm:text-sm">
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
           )}
 
-          <ChevronDown size={16} className="text-[#555b79]" />
+          <ChevronDown size={16} className="hidden text-[#555b79] sm:block" />
         </button>
       </div>
     </header>
