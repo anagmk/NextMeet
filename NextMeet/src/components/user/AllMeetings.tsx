@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CalendarDays,
   ChevronDown,
@@ -61,9 +62,9 @@ const formatMeeting = (meeting: ApiMeeting): Meeting => {
 
 const tabs = [
   "All Meetings",
-  "Upcoming",
-  "History",
   "Scheduled",
+  "History",
+
 ] as const;
 
 type Tab = (typeof tabs)[number];
@@ -75,21 +76,41 @@ const MeetingsPage = () => {
   const [activeTab, setActiveTab] = useState<Tab>("All Meetings");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   useEffect(() => {
     const loadMeetings = async () => {
       try {
         const apiUrl = (import.meta.env.VITE_API_URL ?? "/api").replace(/\/$/, "");
-        const response = await fetch(`${apiUrl}/user/meetings`, {
+        const statusParam =
+          activeTab === "Scheduled"
+            ? "scheduled"
+            : activeTab === "History"
+              ? "completed"
+              : "all";
+
+        const query = new URLSearchParams({
+          page: String(page),
+          limit: "8",
+          status: statusParam,
+          search,
+        });
+
+        const response = await fetch(`${apiUrl}/user/meetings?${query.toString()}`, {
           credentials: "include",
         });
-        const data = await response.json().catch(() => []);
+        const data = await response.json().catch(() => ({ meetings: [] }));
 
         if (!response.ok) {
           throw new Error(data.message || "Unable to load meetings");
         }
 
-        setMeetings(Array.isArray(data) ? data.map(formatMeeting) : []);
+        const items = Array.isArray(data.meetings) ? data.meetings.map(formatMeeting) : [];
+        setMeetings(items);
+        setTotalPages(Math.max(1, Number(data.totalPages ?? 1)));
+        setTotalRecords(Number(data.total ?? items.length));
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Unable to load meetings");
       } finally {
@@ -98,38 +119,12 @@ const MeetingsPage = () => {
     };
 
     loadMeetings();
-  }, []);
+  }, [activeTab, page, search]);
 
   const filteredMeetings = useMemo(() => {
-    return meetings.filter((meeting) => {
-      const matchesSearch =
-        meeting.title.toLowerCase().includes(search.toLowerCase()) ||
-        meeting.meetingId.toLowerCase().includes(search.toLowerCase()) ||
-        meeting.host.toLowerCase().includes(search.toLowerCase());
-
-      let matchesTab = true;
-
-      if (activeTab === "Upcoming") {
-        matchesTab =
-          meeting.status === "Upcoming" ||
-          meeting.status === "Live";
-      }
-
-      if (activeTab === "Scheduled") {
-        matchesTab = meeting.status === "Scheduled";
-      }
-
-      if (activeTab === "History") {
-        matchesTab = meeting.status === "Completed";
-      }
-
-      const matchesStatus =
-        statusFilter === "All" ||
-        meeting.status === statusFilter;
-
-      return matchesSearch && matchesTab && matchesStatus;
-    });
-  }, [activeTab, meetings, search, statusFilter]);
+    if (!statusFilter || statusFilter === "All") return meetings;
+    return meetings.filter((meeting) => meeting.status === statusFilter);
+  }, [meetings, statusFilter]);
 
   return (
     <section className="w-full px-6 py-8 lg:px-10">
@@ -155,7 +150,10 @@ const MeetingsPage = () => {
             <button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+              setActiveTab(tab);
+              setPage(1);
+            }}
               className={`relative whitespace-nowrap px-5 py-4 text-sm font-medium transition ${
                 active
                   ? "text-[#5b3fd6]"
@@ -184,7 +182,7 @@ const MeetingsPage = () => {
             </h2>
 
             <p className="mt-1 text-xs text-[#85899f]">
-              {filteredMeetings.length} meetings found
+              {filteredMeetings.length} meetings on this page · {totalRecords} total
             </p>
           </div>
 
@@ -216,7 +214,6 @@ const MeetingsPage = () => {
               >
                 <option value="All">All</option>
                 <option value="Live">Live</option>
-                <option value="Upcoming">Upcoming</option>
                 <option value="Scheduled">Scheduled</option>
                 <option value="Completed">Completed</option>
               </select>
@@ -265,6 +262,9 @@ const MeetingsPage = () => {
               <MeetingRow
                 key={meeting.id}
                 meeting={meeting}
+                onDelete={(meetingId) => {
+                  setMeetings((prev) => prev.filter((item) => item.id !== meetingId));
+                }}
               />
             ))
           )}
@@ -274,7 +274,7 @@ const MeetingsPage = () => {
         <div className="flex items-center justify-between border-t border-[#eeeeF3] px-5 py-4">
 
           <p className="text-xs text-[#85899f]">
-            Showing {filteredMeetings.length} of {meetings.length}
+            Showing {filteredMeetings.length} of {totalRecords} · Page {page} of {totalPages}
           </p>
 
           <div className="flex items-center gap-1">
@@ -282,39 +282,35 @@ const MeetingsPage = () => {
             <button
               type="button"
               className="flex h-8 w-8 items-center justify-center rounded-md border border-[#e2e2ea] text-[#9a9dad] disabled:cursor-not-allowed"
-              disabled
+              disabled={page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
             >
               ‹
             </button>
 
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-md bg-[#f0edff] text-xs font-medium text-[#5b3fd6]"
-            >
-              1
-            </button>
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+              <button
+                key={pageNumber}
+                type="button"
+                onClick={() => setPage(pageNumber)}
+                className={`flex h-8 w-8 items-center justify-center rounded-md text-xs ${
+                  pageNumber === page
+                    ? "bg-[#f0edff] font-medium text-[#5b3fd6]"
+                    : "text-[#555a73] hover:bg-[#f5f4f9]"
+                }`}
+              >
+                {pageNumber}
+              </button>
+            ))}
 
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-xs text-[#555a73] hover:bg-[#f5f4f9]"
-            >
-              2
-            </button>
-
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-xs text-[#555a73] hover:bg-[#f5f4f9]"
-            >
-              3
-            </button>
-
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-[#e2e2ea] text-[#555a73] hover:bg-[#f5f4f9]"
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-[#e2e2ea] text-[#555a73] disabled:cursor-not-allowed"
+              disabled={page >= totalPages}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
             >
               ›
             </button>
-
           </div>
         </div>
 
@@ -325,10 +321,48 @@ const MeetingsPage = () => {
 
 type MeetingRowProps = {
   meeting: Meeting;
+  onDelete: (meetingId: string) => void;
 };
 
-const MeetingRow = ({ meeting }: MeetingRowProps) => {
+const MeetingRow = ({ meeting, onDelete }: MeetingRowProps) => {
+  const navigate = useNavigate();
   const isLive = meeting.status === "Live";
+  const isJoinAction = meeting.status === "Live" || meeting.status === "Scheduled" || meeting.status === "Upcoming";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleActionClick = () => {
+    if (meeting.status === "Completed") {
+      navigate(`/meetings/${meeting.meetingId}/details`);
+      return;
+    }
+
+    navigate(`/join/${meeting.meetingId}`);
+  };
+
+  const handleDelete = async () => {
+    try {
+      setDeleting(true);
+      const apiUrl = (import.meta.env.VITE_API_URL ?? "/api").replace(/\/$/, "");
+      const response = await fetch(`${apiUrl}/user/meetings/${meeting.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to delete meeting");
+      }
+
+      onDelete(meeting.id);
+      setMenuOpen(false);
+    } catch (error) {
+      console.error("Delete meeting failed:", error);
+      alert(error instanceof Error ? error.message : "Unable to delete meeting");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="group border-b border-[#eeeeF3] px-5 py-5 transition last:border-b-0 hover:bg-[#fcfbff]">
@@ -408,23 +442,39 @@ const MeetingRow = ({ meeting }: MeetingRowProps) => {
 
           <button
             type="button"
+            onClick={handleActionClick}
             className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
               isLive
                 ? "border-[#6d5ce7] text-[#5b3fd6] hover:bg-[#f0edff]"
                 : "border-[#dedee8] text-[#555a73] hover:border-[#cfc5ff] hover:text-[#5b3fd6]"
             }`}
           >
-            {isLive || meeting.status === "Upcoming"
-              ? "Join"
-              : "View"}
+            {isJoinAction ? "Join" : "View"}
           </button>
 
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-[#85899f] transition hover:bg-[#f0edff] hover:text-[#5b3fd6]"
-          >
-            <MoreHorizontal size={17} />
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((prev) => !prev)}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-[#85899f] transition hover:bg-[#f0edff] hover:text-[#5b3fd6]"
+              aria-label="Meeting actions"
+            >
+              <MoreHorizontal size={17} />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-10 z-10 w-32 overflow-hidden rounded-lg border border-[#e8e8ef] bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex w-full items-center justify-start px-3 py-2 text-left text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            )}
+          </div>
 
         </div>
       </div>
@@ -452,12 +502,29 @@ const MeetingRow = ({ meeting }: MeetingRowProps) => {
 
           </div>
 
-          <button
-            type="button"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#85899f] hover:bg-[#f0edff]"
-          >
-            <MoreHorizontal size={17} />
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((prev) => !prev)}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#85899f] hover:bg-[#f0edff]"
+              aria-label="Meeting actions"
+            >
+              <MoreHorizontal size={17} />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-10 z-10 w-32 overflow-hidden rounded-lg border border-[#e8e8ef] bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex w-full items-center justify-start px-3 py-2 text-left text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            )}
+          </div>
 
         </div>
 
@@ -500,11 +567,10 @@ const MeetingRow = ({ meeting }: MeetingRowProps) => {
 
           <button
             type="button"
+            onClick={handleActionClick}
             className="rounded-lg border border-[#6d5ce7] px-4 py-2 text-xs font-medium text-[#5b3fd6] hover:bg-[#f0edff]"
           >
-            {isLive || meeting.status === "Upcoming"
-              ? "Join"
-              : "View"}
+            {isJoinAction ? "Join" : "View"}
           </button>
 
         </div>
@@ -514,7 +580,7 @@ const MeetingRow = ({ meeting }: MeetingRowProps) => {
   );
 };
 
-const ParticipantAvatars = ({ meeting }: MeetingRowProps) => {
+const ParticipantAvatars = ({ meeting }: { meeting: Meeting }) => {
   return (
     <div className="flex items-center">
 

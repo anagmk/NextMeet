@@ -18,6 +18,13 @@ export interface IUser extends Document {
   experience?: number;
 
   isBlocked: boolean;
+  isEmailVerified?: boolean;
+  signupOtpHash?: string;
+  signupOtpExpires?: Date;
+  resetPasswordOtpHash?: string;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+
 
   createdAt: Date;
   updatedAt: Date;
@@ -74,6 +81,26 @@ const userSchema = new Schema<IUser>(
     isBlocked: {
       type: Boolean,
       default: false,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    signupOtpHash: {
+      type: String,
+    },
+    signupOtpExpires: {
+      type: Date,
+    },
+    resetPasswordOtpHash: {
+      type: String,
+    },
+    resetPasswordToken: {
+      type: String,
+    },
+
+    resetPasswordExpires: {
+      type: Date,
     },
   },
   {

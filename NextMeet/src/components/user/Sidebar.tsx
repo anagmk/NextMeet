@@ -1,5 +1,4 @@
 import {
-  User,
   LayoutDashboard,
   Video,
   LogIn,
@@ -15,11 +14,6 @@ import { useUser } from "../../context/UserContext";
 
 const Sidebar = () => {
   const menuItems = [
-    {
-      name: "Profile",
-      icon: User,
-      path: "/profile",
-    },
     {
       name: "Dashboard",
       icon: LayoutDashboard,
@@ -100,19 +94,19 @@ const Sidebar = () => {
 
       {/* Bottom */}
       <div className="mt-auto flex flex-col gap-1">
+        <Link to="/about" className="flex h-12 items-center gap-3.5 rounded-lg px-4 text-left text-[15px] text-[#30344f] transition hover:bg-[#f5f2ff] hover:text-[#5b3fd6]">
+          <CircleHelp size={20} />
+          <span>About</span>
+        </Link>
+
+        <Link to="/terms" className="flex h-12 items-center gap-3.5 rounded-lg px-4 text-left text-[15px] text-[#30344f] transition hover:bg-[#f5f2ff] hover:text-[#5b3fd6]">
+          <Info size={20} />
+          <span>Terms & Conditions</span>
+        </Link>
+
         <button onClick={handleLogout} className="flex h-12 items-center gap-3.5 rounded-lg px-4 text-left text-[15px] text-red-600 transition hover:bg-red-50">
           <LogOut size={20} />
           <span>Logout</span>
-        </button>
-
-        <button className="flex h-12 items-center gap-3.5 rounded-lg px-4 text-left text-[15px] text-[#30344f] transition hover:bg-[#f5f2ff] hover:text-[#5b3fd6]">
-          <CircleHelp size={20} />
-          <span>Help & Support</span>
-        </button>
-
-        <button className="flex h-12 items-center gap-3.5 rounded-lg px-4 text-left text-[15px] text-[#30344f] transition hover:bg-[#f5f2ff] hover:text-[#5b3fd6]">
-          <Info size={20} />
-          <span>About NextMeet</span>
         </button>
       </div>
     </aside>

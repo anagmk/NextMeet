@@ -1,9 +1,10 @@
 
-import DashboardNavbar from "../../components/dashboard/DashboardNavbar";
-import WelcomeBanner from "../../components/dashboard/WelcomeBanner";
-import RecentMeetings from "../../components/dashboard/RecentMeetings";
-import UpcomingMeetings from "../../components/dashboard/UpcomingMeetings";
+import Navbar from "../../components/user/Navbar";
+// import WelcomeBanner from "../../components/dashboard/WelcomeBanner";
+// import RecentMeetings from "../../components/dashboard/RecentMeetings";
+// import UpcomingMeetings from "../../components/dashboard/UpcomingMeetings";
 import Sidebar from "../../components/user/Sidebar";
+import DashboardContent from "../../components/dashboard/DashboardMain";
 
 const Dashboard = () => {
   return (
@@ -11,15 +12,10 @@ const Dashboard = () => {
       <Sidebar />
 
       <div className="ml-[250px] min-h-screen">
-        <DashboardNavbar />
+        <Navbar />
 
         <main className="px-3 py-3 md:px-6">
-          <WelcomeBanner />
-
-          <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <RecentMeetings />
-            <UpcomingMeetings />
-          </div>
+          <DashboardContent />
         </main>
       </div>
     </div>

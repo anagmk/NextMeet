@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import Meeting from "../models/meeting.model.js";
 import { saveMessage } from "../controllers/user/message.controller.js";
+import { generateInterviewReport } from "../services/reportGeneration.service.js";
 
 export const onlineUsers = new Map();
 
@@ -67,9 +68,22 @@ export const setupSocket = (server: HttpServer) => {
   io.on("connection", (socket) => {
     console.log("Socket connected:", socket.id, "user:", socket.data.user?.email);
 
-    socket.on("join-meeting", (meetingCode: string) => {
+    socket.on("join-meeting", async (meetingCode: string) => {
       socket.join(meetingCode);
       console.log(`${socket.data.user.email} joined room: ${meetingCode}`);
+
+      // Store meeting context on the socket so disconnect can reference it later.
+      socket.data.meetingCode = meetingCode;
+      try {
+        const meeting = await Meeting.findOne({
+          meetingCode: String(meetingCode).trim().toUpperCase(),
+        });
+        socket.data.isHost =
+          meeting?.hostId.toString() === socket.data.user._id.toString();
+        socket.data.meetingId = meeting?._id?.toString();
+      } catch (error) {
+        console.error("Failed to resolve meeting for socket:", error);
+      }
 
       socket.to(meetingCode).emit("user-joined", {
         socketId: socket.id,
@@ -134,8 +148,32 @@ export const setupSocket = (server: HttpServer) => {
       socket.to(meetingCode).emit("code-change", { code });
     });
 
-    socket.on("disconnect", () => {
+    socket.on("question-generated", ({ meetingCode, question }) => {
+      socket.to(meetingCode).emit("question-generated", { question });
+    });
+
+    socket.on("disconnect", async () => {
       console.log("Socket disconnected:", socket.id);
+
+      const { meetingCode, meetingId, isHost } = socket.data;
+      if (!meetingCode || !meetingId) return;
+
+      // Only the host leaving ends the meeting and triggers report generation.
+      if (isHost) {
+        try {
+          await Meeting.findByIdAndUpdate(meetingId, {
+            status: "completed",
+            closedAt: new Date(),
+          });
+
+          io.to(meetingCode).emit("meeting-ended");
+
+          const report = await generateInterviewReport(meetingId);
+          console.log("Interview report generated for meeting:", meetingId, report._id);
+        } catch (error) {
+          console.error("Failed to end meeting / generate report:", error);
+        }
+      }
     });
   });
 

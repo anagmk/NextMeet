@@ -8,6 +8,9 @@ type AuthResponse = {
   message: string;
   user?: { id: string; name: string; email: string; role: string };
   refreshToken?: string;
+  resetToken?: string;
+  requiresVerification?: boolean;
+  expiresIn?: number;
 };
 
 let refreshToken: string | null = null;
@@ -100,7 +103,31 @@ export function login(email: string, password: string) {
 }
 
 export function signup(name: string, email: string, password: string) {
-  return request<AuthResponse>("/signup", { name, email, password }).then(saveRefreshToken);
+  return request<AuthResponse>("/signup", { name, email, password });
+}
+
+export function verifySignupOtp(email: string, otp: string) {
+  return request<AuthResponse>("/verify-signup-otp", { email, otp }).then(saveRefreshToken);
+}
+
+export function resendSignupOtp(email: string) {
+  return request<AuthResponse>("/resend-signup-otp", { email });
+}
+
+export function forgotPassword(email: string) {
+  return request<AuthResponse>("/forgot-password", { email });
+}
+
+export function verifyResetOtp(email: string, otp: string) {
+  return request<AuthResponse>("/verify-reset-otp", { email, otp });
+}
+
+export function resendResetOtp(email: string) {
+  return request<AuthResponse>("/resend-reset-otp", { email });
+}
+
+export function resetPassword(email: string, resetToken: string, password: string) {
+  return request<AuthResponse>("/reset-password", { email, resetToken, password });
 }
 
 export async function refreshAccessToken() {

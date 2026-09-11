@@ -1,9 +1,14 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { login } from "../../lib/auth-api";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useUser } from "../../context/UserContext";
+import { login as loginRequest } from "../../lib/auth-api";
 
 const LoginForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login: setAuthenticatedUser } = useUser();
+  const successMessage = (location.state as { message?: string } | null)
+    ?.message;
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState("");
@@ -21,9 +26,19 @@ const LoginForm = () => {
     setIsSubmitting(true);
 
     try {
-      await login(email.trim(), password);
+      console.log("LOGIN START");
+
+      const response = await loginRequest(email.trim(), password);
+      await setAuthenticatedUser(response.user ?? null);
+
+      console.log("LOGIN SUCCESS");
+
       navigate("/dashboard", { replace: true });
+
+      console.log("NAVIGATE CALLED");
     } catch (requestError) {
+      console.log("LOGIN ERROR:", requestError);
+
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -104,6 +119,11 @@ const LoginForm = () => {
       {error && (
         <p role="alert" className="mt-3 text-center text-sm text-red-600">
           {error}
+        </p>
+      )}
+      {successMessage && (
+        <p role="status" className="mt-3 text-center text-sm text-green-600">
+          {successMessage}
         </p>
       )}
 

@@ -27,6 +27,7 @@ async function findOrCreateGoogleUser(profile: any) {
     email,
     profileImage: profile.photos?.[0]?.value,
     authProvider: "google",
+    isEmailVerified: true,
   });
 
   return user;

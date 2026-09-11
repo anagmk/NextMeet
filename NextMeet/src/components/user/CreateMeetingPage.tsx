@@ -231,7 +231,7 @@ function ScheduleMeeting() {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 rounded-lg border border-[#e8e4ff] bg-[#f8f6ff] px-4 py-3.5">
+            {/* <div className="flex items-start gap-3 rounded-lg border border-[#e8e4ff] bg-[#f8f6ff] px-4 py-3.5">
               <Clock3 size={18} className="mt-0.5 shrink-0 text-[#5b3fd6]" />
               <div>
                 <p className="text-sm font-medium text-[#3b326e]">Meeting duration</p>
@@ -239,7 +239,7 @@ function ScheduleMeeting() {
                   The default meeting duration is 60 minutes.
                 </p>
               </div>
-            </div>
+            </div> */}
 
             <div className="flex flex-col-reverse gap-3 border-t border-[#eeeeF3] pt-6 sm:flex-row sm:justify-end">
               <button

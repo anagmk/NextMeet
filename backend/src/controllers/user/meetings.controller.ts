@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Meeting from "../../models/meeting.model.js";
+import { generateInterviewReport } from "../../services/reportGeneration.service.js";
 
 const generateUniqueMeetingCode = async (): Promise<string> => {
   let code: string;
@@ -50,19 +51,48 @@ export const getMeetings = async (req: Request, res: Response) => {
     const userId = (req.user as { _id?: string } | undefined)?._id;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
-    const meetings = await Meeting.find({ "participants.userId": userId })
-      .populate("hostId", "name email")
-      .sort({ scheduledAt: -1 });
+    const page = Math.max(1, Number(req.query.page ?? 1));
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit ?? 10)));
+    const skip = (page - 1) * limit;
+    const search = String(req.query.search ?? "").trim();
+    const status = String(req.query.status ?? "all").trim().toLowerCase();
 
-    res.status(200).json(meetings);
+    const filter: any = { "participants.userId": userId };
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { meetingCode: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [meetings, total] = await Promise.all([
+      Meeting.find(filter)
+        .populate("hostId", "name email")
+        .sort({ scheduledAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Meeting.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      meetings,
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching meetings", error });
+    console.error("Error fetching meetings:", error);
+    return res.status(500).json({ message: "Error fetching meetings", error });
   }
 };
 
 export const getMeetingById = async (req: Request, res: Response) => {
   try {
-    const meetingId = req.params.id;
+    const meetingId = String(req.params.id);
     if(!meetingId) return res.status(400).json({ message: "Meeting ID is required" });
     const userId = (req.user as { _id?: string } | undefined)?._id;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
@@ -140,9 +170,33 @@ export const leaveMeeting = async (req: Request, res: Response) => {
   }
 };
 
+export const deleteMeeting = async (req: Request, res: Response) => {
+  try {
+    const meetingId = String(req.params.id || "").trim();
+    const userId = (req.user as { _id?: string } | undefined)?._id;
+
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    if (!meetingId) return res.status(400).json({ message: "Meeting ID is required" });
+
+    const meeting = await Meeting.findById(meetingId);
+    if (!meeting) return res.status(404).json({ message: "Meeting not found" });
+
+    if (meeting.hostId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Only the host can delete this meeting" });
+    }
+
+    await Meeting.findByIdAndDelete(meetingId);
+
+    res.status(200).json({ message: "Meeting deleted successfully" });
+  } catch (error) {
+    console.error("Delete meeting error:", error);
+    res.status(500).json({ message: "Error deleting meeting" });
+  }
+};
+
 export const closeMeeting = async (req: Request, res: Response) => {
   try {
-    const meetingId = req.params.id;
+    const meetingId = String(req.params.id);
     const userId = (req.user as { _id?: string } | undefined)?._id;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
@@ -159,10 +213,14 @@ export const closeMeeting = async (req: Request, res: Response) => {
       { status: "completed", closedAt: new Date() },
       { new: true }
     );
+    if (!updatedMeeting) return res.status(404).json({ message: "Meeting not found" });
+
+    const report = await generateInterviewReport(meetingId);
 
     res.status(200).json({ 
       message: "Meeting closed successfully",
-      meeting: updatedMeeting
+      meeting: updatedMeeting,
+      report,
     });
   } catch (error) {
     res.status(500).json({ message: "Error closing meeting", error });
@@ -174,12 +232,72 @@ export const meetingHistory = async (req: Request, res: Response) => {
     const userId = (req.user as { _id?: string } | undefined)?._id;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
-    const meetings = await Meeting.find({ "participants.userId": userId, status: { $in: ["completed", "cancelled", "active"] }}).sort({ scheduledAt: -1 });
-   
-    if (!meetings || meetings.length === 0) return res.status(200).json([]);
-    res.status(200).json(meetings);
+    const page = Math.max(1, Number(req.query.page ?? 1));
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit ?? 10)));
+    const skip = (page - 1) * limit;
+    const search = String(req.query.search ?? "").trim();
+    const status = String(req.query.status ?? "all").trim().toLowerCase();
+
+    const filter: any = {
+      "participants.userId": userId,
+      status: { $in: ["completed", "cancelled", "active"] },
+    };
+
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { meetingCode: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [meetings, total] = await Promise.all([
+      Meeting.find(filter)
+        .populate("hostId", "name email")
+        .populate("participants.userId", "name email")
+        .sort({ scheduledAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Meeting.countDocuments(filter),
+    ]);
+
+    const serializedMeetings = meetings.map((meeting) => {
+      const hostRecord = meeting.hostId as any;
+
+      return {
+        _id: meeting._id,
+        title: meeting.title,
+        description: meeting.description,
+        meetingCode: meeting.meetingCode,
+        scheduledAt: meeting.scheduledAt,
+        closedAt: meeting.closedAt,
+        duration: meeting.duration,
+        status: meeting.status,
+        host: hostRecord
+          ? {
+              _id: hostRecord._id ?? hostRecord.toString(),
+              name: hostRecord.name ?? "Unknown host",
+              email: hostRecord.email ?? "",
+            }
+          : null,
+        isHost: meeting.hostId?.toString() === userId.toString(),
+        participantCount: meeting.participants?.length ?? 0,
+      };
+    });
+
+    return res.status(200).json({
+      meetings: serializedMeetings,
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching meeting history", error });
+    console.error("Meeting history error:", error);
+    return res.status(500).json({ message: "Error fetching meeting history", error });
   }
 };
 

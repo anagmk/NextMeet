@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { signup } from "../../lib/auth-api";
+import { Link, useNavigate } from "react-router-dom";
+import { useUser } from "../../context/UserContext";
+import { resendSignupOtp, signup, verifySignupOtp } from "../../lib/auth-api";
+import OtpVerification from "./OtpVerification";
 
 const SignupForm = () => {
   const [name, setName] = useState("");
@@ -9,6 +11,9 @@ const SignupForm = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [awaitingVerification, setAwaitingVerification] = useState(false);
+  const navigate = useNavigate();
+  const { login: setAuthenticatedUser } = useUser();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,8 +37,9 @@ const SignupForm = () => {
 
     try {
       const response = await signup(name.trim(), email.trim(), password);
-      setMessage(`${response.message} You can now log in.`);
+      setMessage(response.message);
       setPassword("");
+      setAwaitingVerification(true);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -47,6 +53,14 @@ const SignupForm = () => {
 
   const inputClassName =
     "h-[50px] w-full rounded-full border border-gray-200 px-5 text-[14px] text-gray-900 outline-none transition placeholder:text-gray-800 focus:border-[#5146e5] focus:ring-1 focus:ring-[#5146e5]";
+
+  if (awaitingVerification) {
+    return <OtpVerification email={email.trim()} onVerify={async (otp) => {
+      const response = await verifySignupOtp(email.trim(), otp);
+      await setAuthenticatedUser(response.user ?? null);
+      navigate("/dashboard", { replace: true });
+    }} onResend={async () => { await resendSignupOtp(email.trim()); }} />;
+  }
 
   return (
     <form onSubmit={handleSubmit} className="mt-[34px] space-y-[17px]">
