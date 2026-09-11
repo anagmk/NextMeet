@@ -1,7 +1,7 @@
 const apiBaseUrl = (import.meta.env.VITE_API_URL).replace(/\/$/, "");
 
 export function getGoogleLoginUrl() {
-  return `${apiBaseUrl}/api/auth/google`;
+  return `${apiBaseUrl}/auth/google`;
 }
 
 type AuthResponse = {
