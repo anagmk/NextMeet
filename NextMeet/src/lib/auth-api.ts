@@ -1,4 +1,4 @@
-const apiBaseUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:5000/api").replace(/\/$/, "");
+const apiBaseUrl = (import.meta.env.VITE_API_URL).replace(/\/$/, "");
 
 export function getGoogleLoginUrl() {
   return `${apiBaseUrl}/auth/google`;

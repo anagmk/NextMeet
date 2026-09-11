@@ -24,7 +24,7 @@ function parseCookies(cookieHeader: string): Record<string, string> {
 export const setupSocket = (server: HttpServer) => {
   const io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:5173",
+      origin: process.env.CLIENT_URL,
       credentials: true,
     },
     transports: ["websocket", "polling"],
