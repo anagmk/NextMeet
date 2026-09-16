@@ -28,6 +28,64 @@ type TestResult = {
   executionError?: string;
 };
 
+type JavaScriptRunResult = {
+  stdout: string;
+  stderr: string;
+};
+
+const runJavaScript = (source: string): JavaScriptRunResult => {
+  const logs: string[] = [];
+  const errors: string[] = [];
+  const browserConsole = {
+    log: (...values: unknown[]) => logs.push(values.map(String).join(" ")),
+    info: (...values: unknown[]) => logs.push(values.map(String).join(" ")),
+    warn: (...values: unknown[]) => logs.push(values.map(String).join(" ")),
+    error: (...values: unknown[]) => errors.push(values.map(String).join(" ")),
+  };
+
+  try {
+    const result = new Function("console", source)(browserConsole);
+    if (result !== undefined && logs.length === 0) logs.push(String(result));
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  return { stdout: logs.join("\n"), stderr: errors.join("\n") };
+};
+
+const runQuestionTests = (
+  source: string,
+  question: GeneratedQuestion,
+): TestResult[] =>
+  question.testCases.slice(0, 2).map((testCase, index) => {
+    try {
+      const args = testCase.args.join(", ");
+      const actual = new Function(
+        `${source}\nreturn JSON.stringify(${question.functionName}(${args}));`,
+      )();
+      const actualOutput = actual === undefined ? "undefined" : String(actual);
+
+      return {
+        label: `Test ${index + 1}`,
+        passed: actualOutput.trim() === testCase.expectedOutput.trim(),
+        hidden: testCase.isHidden,
+        args: testCase.args,
+        expected: testCase.expectedOutput,
+        actual: actualOutput,
+      };
+    } catch (error) {
+      return {
+        label: `Test ${index + 1}`,
+        passed: false,
+        hidden: testCase.isHidden,
+        args: testCase.args,
+        expected: testCase.expectedOutput,
+        actual: "",
+        executionError: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
 type CodeEditorPanelProps = {
   code: string;
   onCodeChange: (value: string | undefined) => void;
@@ -53,7 +111,7 @@ export default function CodeEditorPanel({
   question,
   onQuestionGenerated,
 }: CodeEditorPanelProps) {
-  const [language, setLanguage] = useState("javascript");
+  const language = "javascript";
   const [output, setOutput] = useState(
     "Click Run to see your code output here.",
   );
@@ -87,7 +145,6 @@ export default function CodeEditorPanel({
   };
 
   useEffect(() => {
-    if (question?.language) setLanguage(question.language);
     setHasSubmitted(false);
     setIsConfirmationOpen(false);
     setIsFailedSubmissionConfirmation(false);
@@ -147,63 +204,25 @@ export default function CodeEditorPanel({
     setIsRunning(true);
     setOutput("");
     setTestResults([]);
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/user/judge/run`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code,
-            language,
-            questionId: question?.questionId,
-          }),
-        },
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        setOutput(data.message || "Something went wrong running your code.");
-        return;
-      }
-
-      if (question?.questionId) {
-        const results: TestResult[] = (data.results ?? []).map(
-          (result: Partial<TestResult>) => ({
-            label: result.label ?? "Test",
-            passed: Boolean(result.passed),
-            hidden: Boolean(result.hidden),
-            args: result.args ?? [],
-            expected: result.expected ?? "",
-            actual: result.actual ?? "",
-            executionError: result.executionError,
-          }),
-        );
-        setTestResults(results);
-        setOutput(
-          results
-            .map((result) =>
-              result.executionError
-                ? `${result.label}: Error\n  ${result.executionError}`
-                : `${result.label}: ${result.passed ? "Passed" : "Failed"}\n  Result: ${result.actual}`,
-            )
-            .join("\n\n") || "No test results returned.",
-        );
-        return;
-      }
-
-      const { stdout, stderr, code: exitCode } = data.run;
+    if (question?.questionId) {
+      const results = runQuestionTests(code, question);
+      setTestResults(results);
       setOutput(
-        exitCode !== 0 && stderr
-          ? stderr
-          : stdout || "Code ran successfully with no output.",
+        results
+          .map((result) =>
+            result.executionError
+              ? `${result.label}: Error\n  ${result.executionError}`
+              : `${result.label}: ${result.passed ? "Passed" : "Failed"}\n  Result: ${result.actual}`,
+          )
+          .join("\n\n") || "No test results returned.",
       );
-    } catch (error) {
-      setOutput("Failed to reach the code execution service.");
-      console.error("Run error:", error);
-    } finally {
-      setIsRunning(false);
+    } else {
+      const result = runJavaScript(code);
+      setOutput(
+        result.stderr || result.stdout || "Code ran successfully with no output.",
+      );
     }
+    setIsRunning(false);
   };
 
   const submitCode = async (confirmSubmit = false) => {
@@ -223,7 +242,12 @@ export default function CodeEditorPanel({
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code, language, confirmSubmit }),
+          body: JSON.stringify({
+            code,
+            language,
+            confirmSubmit,
+            testResults: runQuestionTests(code, question),
+          }),
         },
       );
       const data = await response.json();
@@ -289,7 +313,11 @@ export default function CodeEditorPanel({
       // Saving now happens entirely on the backend inside /question/:id/submit —
       // no separate client-side save call needed here.
     } catch (error) {
-      setOutput("Failed to run test cases.");
+      setOutput(
+        error instanceof Error
+          ? `Failed to submit test results: ${error.message}`
+          : "Failed to submit test results.",
+      );
       console.error("Submit error:", error);
     } finally {
       setIsSubmitting(false);
@@ -395,21 +423,9 @@ export default function CodeEditorPanel({
                   </div>
                 )}
               </div>
-              <select
-                value={language}
-                onChange={(event) => setLanguage(event.target.value)}
-                disabled={Boolean(question?.language)}
-                title={question?.language ? "The question language is fixed when it is generated." : undefined}
-                className="rounded-lg bg-[#282832] px-3 py-2 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <option value="javascript">JavaScript</option>
-                <option value="python">Python</option>
-                <option value="java">Java</option>
-                <option value="cpp">C++</option>
-                <option value="c">C</option>
-                <option value="typescript">TypeScript</option>
-                <option value="go">Go</option>
-              </select>
+              <span className="rounded-lg bg-[#282832] px-3 py-2 text-sm text-white">
+                JavaScript
+              </span>
               <button
                 onClick={runCode}
                 disabled={isRunning || isSubmitting}

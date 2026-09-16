@@ -3,9 +3,7 @@ import { Types } from "mongoose";
 import { generateInterviewQuestion } from "../../services/gemini.service.js";
 import Meeting from "../../models/meeting.model.js";
 import MeetingInterview from "../../models/meetingInterview.model.js";
-import { judgeCode } from "../../services/judge0.service.js";
 import { getStarterCode } from "../../services/starterCode.service.js";
-import { buildExecutableCode } from "../../utils/buildExecutableCode.js";
 import InterviewSubmission from "../../models/interviewSubmission.model.js";
 
 const TEST_CASE_COUNT = 2;
@@ -19,11 +17,13 @@ export const generateQuestion = async (req: Request, res: Response) => {
   try {
     const { meetingCode, level, domain, language, jobRole, description } = req.body;
 
-    if (!meetingCode || !level || !domain || !language || !jobRole) {
+    if (!meetingCode || !level || !domain || !jobRole) {
       return res.status(400).json({
-        message: "meetingCode, level, domain, language, and jobRole are required",
+        message: "meetingCode, level, domain, and jobRole are required",
       });
     }
+
+    const selectedLanguage = "javascript";
 
     const meeting = await Meeting.findOne({
       meetingCode: String(meetingCode).trim().toUpperCase(),
@@ -41,7 +41,7 @@ export const generateQuestion = async (req: Request, res: Response) => {
     const question = await generateInterviewQuestion({
       level,
       domain,
-      language,
+      language: selectedLanguage,
       jobRole,
       description,
     });
@@ -51,7 +51,7 @@ export const generateQuestion = async (req: Request, res: Response) => {
       meetingId: meeting._id,
       generatedBy: userId,
       ...question,
-      language,
+      language: selectedLanguage,
     });
 
     res.status(200).json({
@@ -70,8 +70,8 @@ export const generateQuestion = async (req: Request, res: Response) => {
 export const createManualQuestion = async (req: Request, res: Response) => {
   try {
     const { meetingCode, title, description, language, testCases } = req.body;
-    if (!meetingCode || !title?.trim() || !description?.trim() || !language) {
-      return res.status(400).json({ message: "title, description, and language are required" });
+    if (!meetingCode || !title?.trim() || !description?.trim()) {
+      return res.status(400).json({ message: "title and description are required" });
     }
     if (!Array.isArray(testCases) || testCases.length !== TEST_CASE_COUNT) {
       return res.status(400).json({ message: "Exactly two test cases are required" });
@@ -93,14 +93,15 @@ export const createManualQuestion = async (req: Request, res: Response) => {
     }
 
     const functionName = "solution";
+    const selectedLanguage = "javascript";
     const question = await MeetingInterview.create({
       meetingId: meeting._id,
       generatedBy: userId,
       title: title.trim(),
       description: description.trim(),
-      starterCode: getStarterCode(language, functionName, ["input"]),
+      starterCode: getStarterCode(selectedLanguage, functionName, ["input"]),
       functionName,
-      language,
+      language: selectedLanguage,
       testCases: normalizedTestCases,
     });
 
@@ -146,40 +147,29 @@ export const submitQuestionAnswer = async (req: Request, res: Response) => {
       return res.status(422).json({ message: "This question does not have two valid test cases" });
     }
 
-    const results = await Promise.all(
-      testCases.map(async (testCase, index) => {
-        let executableCode: string;
-        try {
-          executableCode = buildExecutableCode(submittedCode, question.functionName, testCase.args, language);
-        } catch (err) {
-          return {
-            label: `Test ${index + 1}`,
-            passed: false,
-            executionError: err instanceof Error ? err.message : "Unsupported language",
-            hidden: testCase.isHidden,
-            args: testCase.args,
-            expected: testCase.expectedOutput,
-            actual: "",
-          };
-        }
+    const submittedResults = req.body.testResults;
+    if (!Array.isArray(submittedResults) || submittedResults.length !== TEST_CASE_COUNT) {
+      return res.status(400).json({ message: "Two JavaScript test results are required" });
+    }
 
-        const result = await judgeCode(executableCode, language);
-        const actual = result.run.stdout ?? "";
-        const expected = testCase.expectedOutput;
-        const executionError = (result.run.stderr ?? "").trim();
-        const exitCode = Number(result.run.code);
+    const results = testCases.map((testCase, index) => {
+      const submittedResult = submittedResults[index];
+      const actual = typeof submittedResult.actual === "string" ? submittedResult.actual : "";
+      const executionError = typeof submittedResult.executionError === "string"
+        ? submittedResult.executionError
+        : undefined;
+      const passed = !executionError && normalizeOutput(actual) === normalizeOutput(testCase.expectedOutput);
 
-        return {
-          label: `Test ${index + 1}`,
-          passed: exitCode === 0 && normalizeOutput(actual) === normalizeOutput(expected),
-          executionError: exitCode !== 0 ? executionError || "The program exited with an error." : undefined,
-          hidden: testCase.isHidden,
-          args: testCase.args,
-          expected,
-          actual: actual || executionError,
-        };
-      }),
-    );
+      return {
+        label: `Test ${index + 1}`,
+        passed,
+        executionError,
+        hidden: testCase.isHidden,
+        args: testCase.args,
+        expected: testCase.expectedOutput,
+        actual: actual || executionError || "",
+      };
+    });
 
     const allPassed = results.every((result) => result.passed);
 

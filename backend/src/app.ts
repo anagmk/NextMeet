@@ -14,6 +14,7 @@
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const localOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
   connectDB();
 
@@ -24,7 +25,7 @@
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.includes(origin) || localOrigins.includes(origin)) {
           callback(null, true);
           return;
         }

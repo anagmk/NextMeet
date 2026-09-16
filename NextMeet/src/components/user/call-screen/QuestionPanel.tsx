@@ -94,7 +94,11 @@ const QuestionPanel = ({
       onQuestionGenerated(data);
       setIsFormOpen(false);
     } catch (err) {
-      setError("Could not reach the server");
+      setError(
+        err instanceof Error
+          ? `Could not reach the server: ${err.message}`
+          : "Could not reach the server",
+      );
       console.error("Question generation error:", err);
     } finally {
       setIsGenerating(false);
@@ -136,7 +140,11 @@ const QuestionPanel = ({
       onQuestionGenerated(data);
       setIsManualFormOpen(false);
     } catch (err) {
-      setError("Could not reach the server");
+      setError(
+        err instanceof Error
+          ? `Could not reach the server: ${err.message}`
+          : "Could not reach the server",
+      );
       console.error("Manual question creation error:", err);
     } finally {
       setIsCreatingManual(false);
@@ -335,21 +343,9 @@ const QuestionPanel = ({
                 rows={5}
                 className="w-full resize-y rounded-lg bg-[#282832] px-3 py-2 text-sm outline-none placeholder:text-[#6b6f80]"
               />
-              <select
-                value={manualData.language}
-                onChange={(event) =>
-                  setManualData({ ...manualData, language: event.target.value })
-                }
-                className="w-full rounded-lg bg-[#282832] px-3 py-2 text-sm outline-none"
-              >
-                <option value="javascript">JavaScript</option>
-                <option value="python">Python</option>
-                <option value="java">Java</option>
-                <option value="cpp">C++</option>
-                <option value="c">C</option>
-                <option value="typescript">TypeScript</option>
-                <option value="go">Go</option>
-              </select>
+              <div className="rounded-lg bg-[#282832] px-3 py-2 text-sm">
+                JavaScript
+              </div>
               <p className="rounded-lg border border-[#5146e5]/30 bg-[#5146e5]/10 px-3 py-2 text-xs text-[#c4c0ff]">
                 The editor will provide a language-specific{" "}
                 <code>solution(input)</code> function. Candidates only write the
@@ -466,18 +462,9 @@ const QuestionPanel = ({
                 <label className="mb-1 block text-xs text-[#8b8f9d]">
                   Language
                 </label>
-                <select
-                  value={formData.language}
-                  onChange={(e) =>
-                    setFormData({ ...formData, language: e.target.value })
-                  }
-                  className="w-full rounded-lg bg-[#282832] px-3 py-2 text-sm outline-none"
-                >
-                  <option value="javascript">JavaScript</option>
-                  <option value="python">Python</option>
-                  <option value="java">Java</option>
-                  <option value="cpp">C++</option>
-                </select>
+                <div className="rounded-lg bg-[#282832] px-3 py-2 text-sm">
+                  JavaScript
+                </div>
               </div>
 
               <div>

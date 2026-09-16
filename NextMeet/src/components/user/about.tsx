@@ -275,8 +275,8 @@ export default function AboutNextMeet({
             <div>
               <h3>Building next</h3>
               <p>
-                AI-powered interview evaluation, using Judge0 for code
-                execution paired with an LLM for assessment.
+                AI-powered interview evaluation paired with an LLM for
+                assessment.
               </p>
             </div>
           </div>
