@@ -23,7 +23,7 @@ export default function DashboardContent() {
   const firstName = user?.name?.split(" ")[0] ?? "there";
 
   return (
-    <div className="flex flex-col gap-6 bg-[#f7f8fc] p-6 md:p-8">
+    <div className="dashboard-page flex flex-col gap-6 bg-[#f7f8fc] p-6 md:p-8">
       {/* =========================================================
           GREETING + QUICK ACTIONS
       ========================================================= */}

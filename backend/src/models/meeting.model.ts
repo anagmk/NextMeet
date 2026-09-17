@@ -7,6 +7,12 @@ interface IParticipant {
   joinedAt?: Date;
 }
 
+export interface IJoinRequest {
+  userId: Types.ObjectId;
+  status: "pending" | "approved" | "rejected";
+  requestedAt: Date;
+}
+
 export interface IMeeting extends Document {
   title: string;
   description?: string;
@@ -16,6 +22,7 @@ export interface IMeeting extends Document {
   duration?: number;
   status: "scheduled" | "active" | "completed" | "cancelled";
   participants: IParticipant[];
+  joinRequests: IJoinRequest[];
   closedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -26,6 +33,15 @@ const participantSchema = new Schema<IParticipant>(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     role: { type: String, enum: ["host", "participant"], default: "participant" },
     joinedAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
+const joinRequestSchema = new Schema<IJoinRequest>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    status: { type: String, enum: ["pending", "approved", "rejected"], required: true },
+    requestedAt: { type: Date, default: Date.now },
   },
   { _id: false }
 );
@@ -44,6 +60,7 @@ const meetingSchema = new Schema<IMeeting>(
       default: "scheduled",
     },
     participants: { type: [participantSchema], default: [] },
+    joinRequests: { type: [joinRequestSchema], default: [] },
     closedAt: { type: Date },
   },
   { timestamps: true }

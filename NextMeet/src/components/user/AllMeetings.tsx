@@ -5,6 +5,8 @@ import {
   ChevronDown,
   Clock3,
   MoreHorizontal,
+  Share2,
+  Copy,
   Search,
   Users,
   Video,
@@ -171,7 +173,7 @@ const MeetingsPage = () => {
       </div>
 
       {/* Meeting List */}
-      <div className="overflow-hidden rounded-xl border border-[#e8e8ef] bg-white">
+      <div className="overflow-visible rounded-xl border border-[#e8e8ef] bg-white">
 
         {/* List Header */}
         <div className="flex flex-col gap-4 border-b border-[#eeeeF3] px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
@@ -330,6 +332,28 @@ const MeetingRow = ({ meeting, onDelete }: MeetingRowProps) => {
   const isJoinAction = meeting.status === "Live" || meeting.status === "Scheduled" || meeting.status === "Upcoming";
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const meetingLink = `${window.location.origin}/join/${meeting.meetingId}`;
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(meetingLink);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: meeting.title, text: "Join my NextMeet meeting", url: meetingLink });
+      } catch {
+        // Ignore a native share dialog cancellation.
+      }
+      return;
+    }
+
+    await handleCopyLink();
+  };
 
   const handleActionClick = () => {
     if (meeting.status === "Completed") {
@@ -365,7 +389,7 @@ const MeetingRow = ({ meeting, onDelete }: MeetingRowProps) => {
   };
 
   return (
-    <div className="group border-b border-[#eeeeF3] px-5 py-5 transition last:border-b-0 hover:bg-[#fcfbff]">
+    <div className={`group relative border-b border-[#eeeeF3] px-5 py-5 transition last:border-b-0 hover:bg-[#fcfbff] ${menuOpen ? "z-20" : "z-0"}`}>
 
       {/* Desktop */}
       <div className="hidden grid-cols-[2fr_1.2fr_1.4fr_1.2fr_1fr_80px] items-center lg:grid">
@@ -463,7 +487,23 @@ const MeetingRow = ({ meeting, onDelete }: MeetingRowProps) => {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-10 z-10 w-32 overflow-hidden rounded-lg border border-[#e8e8ef] bg-white shadow-lg">
+              <div className="absolute right-0 top-10 z-10 w-36 overflow-hidden rounded-lg border border-[#e8e8ef] bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-[#555a73] transition hover:bg-[#f5f3ff]"
+                >
+                  <Share2 size={14} />
+                  Share
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-[#555a73] transition hover:bg-[#f5f3ff]"
+                >
+                  <Copy size={14} />
+                  {copied ? "Copied" : "Copy link"}
+                </button>
                 <button
                   type="button"
                   onClick={handleDelete}
@@ -513,7 +553,23 @@ const MeetingRow = ({ meeting, onDelete }: MeetingRowProps) => {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-10 z-10 w-32 overflow-hidden rounded-lg border border-[#e8e8ef] bg-white shadow-lg">
+              <div className="absolute right-0 top-10 z-10 w-36 overflow-hidden rounded-lg border border-[#e8e8ef] bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-[#555a73] transition hover:bg-[#f5f3ff]"
+                >
+                  <Share2 size={14} />
+                  Share
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-[#555a73] transition hover:bg-[#f5f3ff]"
+                >
+                  <Copy size={14} />
+                  {copied ? "Copied" : "Copy link"}
+                </button>
                 <button
                   type="button"
                   onClick={handleDelete}

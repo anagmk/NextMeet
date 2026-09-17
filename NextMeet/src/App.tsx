@@ -24,6 +24,8 @@ import AboutNextMeet from "./components/user/about";
 import TermsConditions from "./components/user/TermsConditions";
 import Navbar from "./components/user/Navbar";
 import Sidebar from "./components/user/Sidebar";
+import SettingsPage from "./components/user/SettingsPage";
+import { applyTheme, type AppTheme } from "./lib/theme";
 
 function MeetingRoute() {
   const location = useLocation();
@@ -46,6 +48,26 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 function App() {
   useEffect(() => {
+    let savedTheme: AppTheme = "system";
+    try {
+      const savedSettings = JSON.parse(localStorage.getItem("nextmeet-settings") || "{}");
+      savedTheme = savedSettings?.appearance?.theme || "system";
+    } catch {
+      savedTheme = "system";
+    }
+
+    applyTheme(savedTheme);
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleSystemThemeChange = () => {
+      try {
+        const currentSettings = JSON.parse(localStorage.getItem("nextmeet-settings") || "{}");
+        if ((currentSettings?.appearance?.theme || "system") === "system") applyTheme("system");
+      } catch {
+        applyTheme("system");
+      }
+    };
+    mediaQuery.addEventListener("change", handleSystemThemeChange);
+
     const socket = io(import.meta.env.VITE_SERVER_URL, {
       withCredentials: true,
     });
@@ -58,6 +80,7 @@ function App() {
     });
 
     return () => {
+      mediaQuery.removeEventListener("change", handleSystemThemeChange);
       socket.disconnect();
     };
   }, []);
@@ -71,6 +94,7 @@ function App() {
       <Route path="/reset-password" element={<PublicOnlyRoute><ResetPassword /></PublicOnlyRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
       <Route path="/create-meeting" element={<ProtectedRoute><ScheduleMeeting /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><MeetingsHistory/></ProtectedRoute>} />
       <Route path="/join/:meetingCode" element={<ProtectedRoute><JoinLobby /></ProtectedRoute>} />

@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
 import Meeting from "../../models/meeting.model.js";
 import { generateInterviewReport } from "../../services/reportGeneration.service.js";
 
@@ -138,12 +137,9 @@ export const joinMeeting = async (req: Request, res: Response) => {
     if (!meeting) return res.status(404).json({ message: "Meeting not found" });
 
     const isParticipant = meeting.participants.some((participant) => participant.userId.toString() === userId.toString());
-    if (isParticipant) return res.status(400).json({ message: "User already joined the meeting" });
+    if (!isParticipant) return res.status(403).json({ message: "Join request not approved" });
 
-    meeting.participants.push({ userId: new mongoose.Types.ObjectId(userId), role: "participant" });
-    await meeting.save();
-
-    res.status(200).json({ message: "Joined the meeting successfully", meeting });
+    res.status(200).json({ message: "Join permission confirmed", meeting });
   } catch (error) {
     res.status(500).json({ message: "Error joining meeting", error });
   }

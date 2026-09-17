@@ -89,7 +89,7 @@ const Sidebar = () => {
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-[250px] -translate-x-full flex-col border-r border-[#e8e8ef] bg-white px-4 py-6 shadow-lg transition-transform duration-200 md:translate-x-0 md:shadow-none ${
+        className={`dark-theme-sidebar fixed left-0 top-0 z-50 flex h-screen w-[250px] -translate-x-full flex-col border-r border-[#e8e8ef] bg-white px-4 py-6 shadow-lg transition-transform duration-200 md:translate-x-0 md:shadow-none ${
           mobileOpen ? "translate-x-0" : ""
         }`}
       >

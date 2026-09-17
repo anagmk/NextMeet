@@ -42,3 +42,14 @@ export function useRefreshToken(token: string) {
 export function revokeRefreshToken(token: string) {
   refreshSessions.delete(hashToken(token));
 }
+
+export function getRefreshSessions(userId: string) {
+  removeExpiredSessions();
+  return [...refreshSessions.values()].filter((session) => session.userId === userId).length;
+}
+
+export function revokeAllRefreshTokens(userId: string) {
+  for (const [tokenHash, session] of refreshSessions) {
+    if (session.userId === userId) refreshSessions.delete(tokenHash);
+  }
+}

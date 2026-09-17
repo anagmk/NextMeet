@@ -8,6 +8,7 @@ import {
   Link,
   Video,
 } from "lucide-react";
+import AdRail from "./AdRail";
 
 function ScheduleMeeting() {
   const navigate = useNavigate();
@@ -91,7 +92,8 @@ function ScheduleMeeting() {
 
   return (
     <div className="min-h-screen bg-[#f8f8fc] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-8 lg:flex-row lg:items-start">
+        <div className="min-w-0 max-w-4xl flex-1">
 
         <button
           type="button"
@@ -269,6 +271,8 @@ function ScheduleMeeting() {
           You can edit the meeting details after creating it.
         </p>
 
+        </div>
+        <AdRail />
       </div>
     </div>
   );

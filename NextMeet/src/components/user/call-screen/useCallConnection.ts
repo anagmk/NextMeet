@@ -26,6 +26,7 @@ type UseCallConnectionOptions = {
 export default function useCallConnection({ meetingCode, initialMicOn, initialCamOn, localVideoRef, remoteVideoRef, onRemoteCodeChange, onQuestionGenerated }: UseCallConnectionOptions) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [joinError, setJoinError] = useState("");
+  const [accessDenied, setAccessDenied] = useState(false);
   const [micOn, setMicOn] = useState(initialMicOn);
   const [camOn, setCamOn] = useState(initialCamOn);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -82,6 +83,7 @@ export default function useCallConnection({ meetingCode, initialMicOn, initialCa
     if (!meetingCode) return;
     const newSocket = io(import.meta.env.VITE_SERVER_URL, { withCredentials: true });
     newSocket.on("connect", () => { console.log("Connected to server:", newSocket.id); newSocket.emit("join-meeting", meetingCode); });
+    newSocket.on("meeting-access-denied", ({ message }: { message: string }) => { setAccessDenied(true); setJoinError(message); });
     newSocket.on("user-joined", async ({ socketId }: { socketId: string }) => {
       if (!socketId || socketId === newSocket.id) return;
       const stream = await ensureLocalStream();
@@ -134,5 +136,5 @@ export default function useCallConnection({ meetingCode, initialMicOn, initialCa
   const toggleCam = () => { const track = localStreamRef.current?.getVideoTracks()[0]; if (track) { track.enabled = !track.enabled; setCamOn(track.enabled); } };
   const leaveCall = () => { localStreamRef.current?.getTracks().forEach((track) => track.stop()); peerConnectionRef.current?.close(); peerConnectionRef.current = null; socket?.disconnect(); };
 
-  return { socket, joinError, micOn, camOn, toggleMic, toggleCam, leaveCall };
+  return { socket, joinError, accessDenied, micOn, camOn, toggleMic, toggleCam, leaveCall };
 }

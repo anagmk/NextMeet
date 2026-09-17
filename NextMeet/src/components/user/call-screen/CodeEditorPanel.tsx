@@ -33,6 +33,14 @@ type JavaScriptRunResult = {
   stderr: string;
 };
 
+const getSavedEditorSettings = () => {
+  try {
+    return JSON.parse(localStorage.getItem("nextmeet-settings") || "{}").editor || {};
+  } catch {
+    return {};
+  }
+};
+
 const runJavaScript = (source: string): JavaScriptRunResult => {
   const logs: string[] = [];
   const errors: string[] = [];
@@ -111,7 +119,9 @@ export default function CodeEditorPanel({
   question,
   onQuestionGenerated,
 }: CodeEditorPanelProps) {
-  const language = "javascript";
+  const editorSettings = getSavedEditorSettings();
+  const language = question?.language || editorSettings.defaultLanguage || "javascript";
+  const editorTheme = editorSettings.theme === "light" ? "vs" : "vs-dark";
   const [output, setOutput] = useState(
     "Click Run to see your code output here.",
   );
@@ -372,8 +382,14 @@ export default function CodeEditorPanel({
                 language={language}
                 value={code}
                 onChange={onCodeChange}
-                theme="vs-dark"
-                options={{ fontSize: 14, minimap: { enabled: false } }}
+                theme={editorTheme}
+                options={{
+                  fontSize: Number(editorSettings.fontSize) || 14,
+                  tabSize: Number(editorSettings.tabSize) || 2,
+                  lineNumbers: editorSettings.lineNumbers === false ? "off" : "on",
+                  wordWrap: editorSettings.wordWrap ? "on" : "off",
+                  minimap: { enabled: editorSettings.minimap === true },
+                }}
               />
             </div>
             <div

@@ -1,7 +1,8 @@
-import { Sun, Bell, Plus, ChevronDown } from "lucide-react";
+import { Sun, Bell, Plus, ChevronDown, Monitor, Moon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
+import { getThemePreference, onThemePreferenceChange, setThemePreference, type AppTheme } from "../../lib/theme";
 
 type NotificationItem = {
   _id: string;
@@ -17,6 +18,15 @@ const Navbar = () => {
   const { user } = useUser();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<AppTheme>(getThemePreference);
+
+  useEffect(() => onThemePreferenceChange(setTheme), []);
+
+  const cycleTheme = () => {
+    const nextTheme: AppTheme = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+    setThemePreference(nextTheme);
+    setTheme(nextTheme);
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -100,10 +110,13 @@ const Navbar = () => {
     <header className="flex h-20 items-center justify-end border-b border-[#e8e8ef] bg-white px-4 sm:px-5 md:px-7 md:pl-10">
       <div className="flex items-center gap-2 sm:gap-3 md:gap-[18px]">
         <button
+          type="button"
+          onClick={cycleTheme}
           className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[#dedee8] bg-white text-[#30344f] transition hover:border-[#cfc5ff] hover:text-[#5b3fd6] sm:flex"
-          title="Change theme"
+          title={`Theme: ${theme}. Click to switch.`}
+          aria-label={`Theme: ${theme}. Click to switch.`}
         >
-          <Sun size={18} />
+          {theme === "light" ? <Sun size={18} /> : theme === "dark" ? <Moon size={18} /> : <Monitor size={18} />}
         </button>
 
         <button

@@ -1,6 +1,7 @@
 // JoinLobby.jsx
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
+import { io, type Socket } from "socket.io-client";
 import { Mic, MicOff, Video, VideoOff, ArrowLeft } from "lucide-react";
 
 type Meeting = {
@@ -25,6 +26,21 @@ export default function JoinLobby() {
   const [micOn, setMicOn] = useState(initialMicOn);
   const [mediaError] = useState("");
   const [joining, setJoining] = useState(false);
+  const [waitingForApproval, setWaitingForApproval] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const preferencesRef = useRef({ camOn, micOn });
+  preferencesRef.current = { camOn, micOn };
+
+  useEffect(() => {
+    if (!meetingCode) return;
+    const socket = io(import.meta.env.VITE_SERVER_URL, { withCredentials: true });
+    socketRef.current = socket;
+    socket.on("join-request-decision", ({ approved, meetingCode: approvedCode }: { approved: boolean; meetingCode: string }) => {
+      if (approved) navigate(`/meet/${approvedCode}`, { state: { skipLobby: true, ...preferencesRef.current } });
+      else navigate("/dashboard", { state: { notification: "Rejected" } });
+    });
+    return () => { socket.disconnect(); socketRef.current = null; };
+  }, [meetingCode, navigate]);
 
   // 1. Fetch meeting info (does NOT join yet)
   useEffect(() => {
@@ -100,23 +116,18 @@ export default function JoinLobby() {
     setJoining(true);
     setError("");
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/meetings/join`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meetingCode }),
+      if (!socketRef.current) throw new Error("Unable to connect to meeting server");
+      const response = await new Promise<{ ok: boolean; message?: string }>((resolve) => {
+        socketRef.current?.emit("request-join", { meetingCode }, resolve);
       });
-      const data = await res.json();
-      if (!res.ok && data.message !== "User already joined the meeting") {
-        throw new Error(data.message || "Failed to join meeting");
+      if (!response.ok) throw new Error(response.message || "Failed to request access");
+      if (response.message === "Already approved") {
+        localStreamRef.current?.getTracks().forEach((track) => track.stop());
+        navigate(`/meet/${meetingCode}`, { state: { skipLobby: true, camOn, micOn } });
+      } else {
+        setWaitingForApproval(true);
+        setError("Request sent. Waiting for the host to approve you...");
       }
-
-      // stop preview stream here — the call screen will request its own
-      localStreamRef.current?.getTracks().forEach((track) => track.stop());
-
-      navigate(`/meet/${meetingCode}`, {
-        state: { skipLobby: true, camOn, micOn },
-      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to join meeting");
       setJoining(false);
@@ -215,10 +226,10 @@ export default function JoinLobby() {
 
         <button
           onClick={handleJoin}
-          disabled={joining}
+          disabled={joining || waitingForApproval}
           className="mx-auto block h-12 w-full max-w-xs rounded-lg bg-[#5b3fd6] text-sm font-medium text-white shadow-sm transition hover:bg-[#4d32c5] disabled:opacity-50"
         >
-          {joining ? "Joining..." : "Join meeting"}
+          {joining ? "Requesting access..." : waitingForApproval ? "Waiting for host..." : "Join meeting"}
         </button>
       </div>
     </div>

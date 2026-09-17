@@ -67,28 +67,74 @@ export const setupSocket = (server: HttpServer) => {
 
   io.on("connection", (socket) => {
     console.log("Socket connected:", socket.id, "user:", socket.data.user?.email);
+    socket.join(`user:${socket.data.user._id.toString()}`);
+
+    socket.on("request-join", async ({ meetingCode }: { meetingCode: string }, acknowledge: (response: { ok: boolean; message?: string }) => void) => {
+      try {
+        const normalizedCode = String(meetingCode || "").trim().toUpperCase();
+        const meeting = await Meeting.findOne({ meetingCode: normalizedCode });
+        if (!meeting) return acknowledge({ ok: false, message: "Meeting not found" });
+        if (meeting.status === "completed" || meeting.status === "cancelled") return acknowledge({ ok: false, message: "This meeting has ended" });
+
+        const userId = socket.data.user._id;
+        const isParticipant = meeting.participants.some((participant) => participant.userId.toString() === userId.toString());
+        if (isParticipant) return acknowledge({ ok: true, message: "Already approved" });
+
+        const existingRequest = meeting.joinRequests.find((request) => request.userId.toString() === userId.toString());
+        if (existingRequest) {
+          if (existingRequest.status === "approved") return acknowledge({ ok: true, message: "Already approved" });
+          if (existingRequest.status === "pending") return acknowledge({ ok: true, message: "Request already pending" });
+          return acknowledge({ ok: false, message: "Join request was rejected" });
+        }
+
+        meeting.joinRequests.push({ userId, status: "pending", requestedAt: new Date() });
+        await meeting.save();
+        io.to(`user:${meeting.hostId.toString()}`).emit("join-request", {
+          meetingCode: normalizedCode,
+          requester: { id: userId.toString(), name: socket.data.user.name, email: socket.data.user.email },
+        });
+        acknowledge({ ok: true, message: "Join request sent" });
+      } catch (error) {
+        console.error("Socket request-join error:", error);
+        acknowledge({ ok: false, message: "Unable to request access" });
+      }
+    });
+
+    socket.on("respond-to-join", async ({ meetingCode, requesterId, decision }: { meetingCode: string; requesterId: string; decision: "allow" | "reject" }) => {
+      try {
+        const normalizedCode = String(meetingCode || "").trim().toUpperCase();
+        const meeting = await Meeting.findOne({ meetingCode: normalizedCode });
+        if (!meeting || meeting.hostId.toString() !== socket.data.user._id.toString()) return;
+
+        const request = meeting.joinRequests.find((item) => item.userId.toString() === requesterId && item.status === "pending");
+        if (!request) return;
+        request.status = decision === "allow" ? "approved" : "rejected";
+        if (decision === "allow") meeting.participants.push({ userId: request.userId, role: "participant" });
+        await meeting.save();
+        io.to(`user:${requesterId}`).emit("join-request-decision", { meetingCode: normalizedCode, approved: decision === "allow" });
+      } catch (error) {
+        console.error("Socket respond-to-join error:", error);
+      }
+    });
 
     socket.on("join-meeting", async (meetingCode: string) => {
-      socket.join(meetingCode);
-      console.log(`${socket.data.user.email} joined room: ${meetingCode}`);
-
-      // Store meeting context on the socket so disconnect can reference it later.
-      socket.data.meetingCode = meetingCode;
       try {
-        const meeting = await Meeting.findOne({
-          meetingCode: String(meetingCode).trim().toUpperCase(),
-        });
+        const normalizedCode = String(meetingCode).trim().toUpperCase();
+        const meeting = await Meeting.findOne({ meetingCode: normalizedCode });
+        const isParticipant = meeting?.participants.some((participant) => participant.userId.toString() === socket.data.user._id.toString());
+        if (!meeting || !isParticipant) {
+          socket.emit("meeting-access-denied", { message: "Join request not approved" });
+          return;
+        }
+
+        socket.join(normalizedCode);
+        console.log(`${socket.data.user.email} joined room: ${normalizedCode}`);
+        socket.data.meetingCode = normalizedCode;
         socket.data.isHost =
           meeting?.hostId.toString() === socket.data.user._id.toString();
         socket.data.meetingId = meeting?._id?.toString();
-      } catch (error) {
-        console.error("Failed to resolve meeting for socket:", error);
-      }
-
-      socket.to(meetingCode).emit("user-joined", {
-        socketId: socket.id,
-        email: socket.data.user.email,
-      });
+        socket.to(normalizedCode).emit("user-joined", { socketId: socket.id, email: socket.data.user.email });
+      } catch (error) { console.error("Failed to resolve meeting for socket:", error); }
     });
 
     socket.on("send-message", async ({ meetingCode, message }: { meetingCode: string; message: string }) => {

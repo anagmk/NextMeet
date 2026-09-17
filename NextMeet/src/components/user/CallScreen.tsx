@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { MessageCircle } from "lucide-react";
+import { Check, MessageCircle, X } from "lucide-react";
 import ChatSideBar from "./ChatSideBar";
 import CallControls from "./call-screen/CallControls";
 import CodeEditorPanel from "./call-screen/CodeEditorPanel";
@@ -17,6 +17,8 @@ type GeneratedQuestion = {
   functionName: string;
   testCases: { args: string[]; expectedOutput: string; isHidden: boolean }[];
 };
+
+type JoinRequest = { id: string; name: string; email: string };
 
 export default function CallScreen() {
   const { meetingCode } = useParams();
@@ -35,6 +37,7 @@ export default function CallScreen() {
   const [isHost, setIsHost] = useState(false);
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [question, setQuestion] = useState<GeneratedQuestion | null>(null);
+  const [joinRequest, setJoinRequest] = useState<JoinRequest | null>(null);
   const resizeStartRef = useRef<number | null>(null);
   const heightStartRef = useRef(videoPanelHeight);
   const isRemoteCodeUpdate = useRef(false);
@@ -52,7 +55,7 @@ export default function CallScreen() {
     [],
   );
 
-  const { socket, joinError, micOn, camOn, toggleMic, toggleCam, leaveCall } =
+  const { socket, joinError, accessDenied, micOn, camOn, toggleMic, toggleCam, leaveCall } =
     useCallConnection({
       meetingCode,
       initialMicOn,
@@ -84,6 +87,28 @@ export default function CallScreen() {
     };
     void fetchMeeting();
   }, [meetingCode, user]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleJoinRequest = ({ meetingCode: requestedCode, requester }: { meetingCode: string; requester: JoinRequest }) => {
+      if (requestedCode === meetingCode) setJoinRequest(requester);
+    };
+    socket.on("join-request", handleJoinRequest);
+    return () => { socket.off("join-request", handleJoinRequest); };
+  }, [isHost, meetingCode, socket]);
+
+  useEffect(() => {
+    if (accessDenied) {
+      leaveCall();
+      navigate("/dashboard", { state: { notification: "Rejected" } });
+    }
+  }, [accessDenied, leaveCall, navigate]);
+
+  const respondToJoin = (decision: "allow" | "reject") => {
+    if (!socket || !meetingCode || !joinRequest) return;
+    socket.emit("respond-to-join", { meetingCode, requesterId: joinRequest.id, decision });
+    setJoinRequest(null);
+  };
 
   const startVideoResize = (event: React.MouseEvent<HTMLDivElement>) => {
     resizeStartRef.current = event.clientY;
@@ -132,6 +157,19 @@ export default function CallScreen() {
 
   return (
     <div className="min-h-screen bg-[#0a0b10] p-4 text-white md:p-6">
+      {joinRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#171a22] p-5 shadow-2xl">
+            <p className="text-xs uppercase tracking-[0.2em] text-[#8b8f9d]">Join request</p>
+            <h2 className="mt-2 text-lg font-semibold">{joinRequest.name} wants to join</h2>
+            <p className="mt-1 text-sm text-[#aeb2c0]">{joinRequest.email}</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => respondToJoin("reject")} className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 px-3 py-2 text-sm text-red-200 hover:bg-red-400/10"><X size={16} /> Reject</button>
+              <button type="button" onClick={() => respondToJoin("allow")} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-500"><Check size={16} /> Allow</button>
+            </div>
+          </div>
+        </div>
+      )}
       {joinError && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {joinError}

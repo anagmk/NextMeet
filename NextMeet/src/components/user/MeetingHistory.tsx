@@ -47,7 +47,7 @@ export default function MeetingHistory() {
         const payload = await res.json().catch(() => ({ meetings: [] }));
 
         if (!res.ok) {
-          throw new Error(payload.message || "Could not load meeting history.");
+          throw new Error(payload.message || "No meeting history.");
         }
 
         const baseMeetings = Array.isArray(payload?.meetings) ? payload.meetings : [];
@@ -137,7 +137,7 @@ export default function MeetingHistory() {
   const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
 
   return (
-    <div className="space-y-4">
+    <div className="history-list space-y-4">
       {meetings.map((meeting) => {
         const resultLabel = meeting.overallResult === "passed" ? "Passed" : meeting.overallResult === "failed" ? "Failed" : "Completed";
         const resultClasses =
