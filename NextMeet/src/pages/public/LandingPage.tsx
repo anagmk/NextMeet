@@ -9,7 +9,17 @@ import {
   Sparkles,
   Play,
   ArrowRight,
+  Monitor,
+  Moon,
+  Sun,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  getThemePreference,
+  onThemePreferenceChange,
+  setThemePreference,
+  type AppTheme,
+} from "../../lib/theme";
 
 import candidateImage from "../../assets/candidate.jpg";
 import interviewerImage from "../../assets/interviewer.jpg";
@@ -38,8 +48,19 @@ const features = [
 ];
 
 export default function LandingPage() {
+  const [theme, setTheme] = useState<AppTheme>(getThemePreference);
+
+  useEffect(() => onThemePreferenceChange(setTheme), []);
+
+  const cycleTheme = () => {
+    const nextTheme: AppTheme =
+      theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+    setThemePreference(nextTheme);
+    setTheme(nextTheme);
+  };
+
   return (
-    <div className="min-h-screen bg-[#f7f8fc] text-[#171a2b]">
+    <div className="landing-page min-h-screen bg-[#f7f8fc] text-[#171a2b]">
 
       {/* ================= NAVBAR ================= */}
       <nav className="border-b border-[#e8e9ef] bg-white">
@@ -58,6 +79,22 @@ export default function LandingPage() {
 
           {/* Navigation */}
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={cycleTheme}
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#dedee8] bg-white text-[#596174] transition hover:border-[#cfc5ff] hover:text-[#5146e5]"
+              title={`Theme: ${theme}. Click to switch.`}
+              aria-label={`Theme: ${theme}. Click to switch.`}
+            >
+              {theme === "light" ? (
+                <Sun size={18} />
+              ) : theme === "dark" ? (
+                <Moon size={18} />
+              ) : (
+                <Monitor size={18} />
+              )}
+            </button>
+
             <Link
               to="/login"
               className="rounded-lg px-4 py-2 text-sm font-medium text-[#596174] transition hover:bg-[#f5f5f8] hover:text-[#171a2b]"
@@ -496,7 +533,7 @@ export default function LandingPage() {
       {/* ================= CTA ================= */}
       <section className="mx-auto max-w-7xl px-6 py-20 md:py-28">
 
-        <div className="overflow-hidden rounded-2xl bg-[#5146e5] px-8 py-14 text-center text-white md:px-16">
+        <div className="landing-cta overflow-hidden rounded-2xl bg-[#5146e5] px-8 py-14 text-center text-white md:px-16">
 
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d9d6ff]">
             Get started

@@ -6,13 +6,13 @@ import SocialLogin from "../../components/auth/SocialLogin";
 
 const Login = () => {
   return (
-    <div className="min-h-screen bg-white text-[#111827]">
+    <div className="auth-page min-h-screen bg-white text-[#111827]">
       <AuthNavbar />
 
       <main className="flex justify-center px-5">
-        <div className="w-full max-w-[384px] pt-[14px]">
+        <div className="mt-8 w-full max-w-[420px] rounded-2xl border border-gray-200 px-6 py-7 shadow-sm sm:px-8">
           <AuthHeader
-            title="Welcome back 👋"
+            title="Welcome back"
             subtitle="Log in to jump back into your meetings."
           />
 
